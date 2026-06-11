@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from 'src/infra/database/prisma/generated/prisma/client';
+import { openAPI } from 'better-auth/plugins';
 
 const databaseUrl =
   process.env.DATABASE_URL ??
@@ -19,6 +20,8 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
+
+  plugins: [openAPI()],
 
   emailAndPassword: {
     enabled: true,
