@@ -7,6 +7,7 @@ import { auth } from './modules/auth/auth';
 import { PrismaModule } from './infra/database/prisma/prisma.module';
 import { MarketplacesModule } from './modules/marketplaces/marketplaces.module';
 import { AutomationTasksModule } from './modules/automation-tasks/automation-tasks.module';
+import { AffiliateLinkCaptureModule } from './modules/affiliate-link-capture/affiliate-link-capture.module';
 
 const DEFAULT_REDIS_PORT = 6379;
 
@@ -59,6 +60,7 @@ function getRedisPort(configService: ConfigService): number {
 
     MarketplacesModule,
     AutomationTasksModule,
+    AffiliateLinkCaptureModule,
   ],
 })
 export class AppModule {}
