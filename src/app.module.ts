@@ -3,6 +3,7 @@ import { AuthModule } from '@thallesp/nestjs-better-auth';
 
 import { auth } from './modules/auth/auth';
 import { PrismaModule } from './infra/database/prisma/prisma.module';
+import { MarketplacesModule } from './modules/marketplaces/marketplaces.module';
 
 @Module({
   imports: [
@@ -21,6 +22,8 @@ import { PrismaModule } from './infra/database/prisma/prisma.module';
         },
       },
     }),
+
+    MarketplacesModule,
   ],
 })
 export class AppModule {}
