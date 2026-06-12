@@ -9,7 +9,7 @@ import {
 
 @Injectable()
 export class FakeAffiliateLinkCaptureProvider implements AffiliateLinkCaptureProvider {
-  readonly marketplaces = Object.values(Marketplace);
+  readonly marketplaces = [Marketplace.Shopee];
 
   captureAffiliateLink(
     input: CaptureAffiliateLinkInput,
