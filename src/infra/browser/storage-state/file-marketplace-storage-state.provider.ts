@@ -25,15 +25,15 @@ export class FileMarketplaceStorageStateProvider extends MarketplaceStorageState
   ): Promise<BrowserStorageState> {
     const environmentVariable = MARKETPLACE_STORAGE_STATE_ENV[marketplace];
     const configuredPath = this.configService.get<string>(environmentVariable);
+    const defaultPath = this.getDefaultStorageStatePath(marketplace);
+    const storageStatePath = resolve(configuredPath?.trim() || defaultPath);
 
-    if (!configuredPath?.trim()) {
+    if (!configuredPath?.trim() && !defaultPath) {
       throw new BrowserSessionNotConfiguredError(
         marketplace,
         environmentVariable,
       );
     }
-
-    const storageStatePath = resolve(configuredPath);
 
     try {
       const content = await readFile(storageStatePath, 'utf8');
@@ -58,6 +58,14 @@ export class FileMarketplaceStorageStateProvider extends MarketplaceStorageState
         { cause: error },
       );
     }
+  }
+
+  private getDefaultStorageStatePath(marketplace: Marketplace): string {
+    if (marketplace === Marketplace.MercadoLivre) {
+      return '.auth/mercadolivre-storage-state.json';
+    }
+
+    return '';
   }
 
   private isStorageState(value: unknown): value is BrowserStorageState {

@@ -46,7 +46,13 @@ export class PlaywrightService implements OnModuleDestroy {
     const storageState =
       await this.storageStateProvider.getStorageState(marketplace);
     const browser = await this.getBrowser();
-    const context = await browser.newContext({ storageState });
+    const context = await browser.newContext({
+      storageState,
+      userAgent:
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      viewport: { width: 1440, height: 900 },
+      locale: 'pt-BR',
+    });
     this.contexts.add(context);
 
     try {

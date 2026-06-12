@@ -92,9 +92,11 @@ describe('PlaywrightService', () => {
 
     expect(getStorageState).toHaveBeenCalledWith(Marketplace.Amazon);
     expect(launch).toHaveBeenCalledWith({ headless: true });
-    expect(newContext).toHaveBeenCalledWith({
-      storageState: { cookies: [], origins: [] },
-    });
+    expect(newContext).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageState: { cookies: [], origins: [] },
+      }),
+    );
     expect(setFirstPageNavigationTimeout).toHaveBeenCalledWith(15000);
     expect(firstPageGoto).toHaveBeenCalledWith(
       'https://amazon.com.br/dp/B000000001',

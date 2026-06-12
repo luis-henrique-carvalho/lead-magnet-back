@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -37,18 +37,47 @@ describe('FileMarketplaceStorageStateProvider', () => {
     expect(getConfig).toHaveBeenCalledWith('AMAZON_STORAGE_STATE_PATH');
   });
 
+  it('uses the local Mercado Livre fallback when the env var is missing', async () => {
+    const fallbackPath = join(
+      temporaryDirectory,
+      '.auth',
+      'mercadolivre-storage-state.json',
+    );
+    const storageState = { cookies: [], origins: [] };
+    await mkdir(join(temporaryDirectory, '.auth'), { recursive: true });
+    await writeFile(fallbackPath, JSON.stringify(storageState));
+    const configService = {
+      get: jest.fn().mockReturnValue(undefined),
+    } as unknown as ConfigService;
+    const provider = new FileMarketplaceStorageStateProvider(configService);
+
+    const originalCwd = process.cwd();
+
+    try {
+      process.chdir(temporaryDirectory);
+
+      await expect(
+        provider.getStorageState(Marketplace.MercadoLivre),
+      ).resolves.toEqual(storageState);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(configService.get).toHaveBeenCalledWith(
+        'MERCADO_LIVRE_STORAGE_STATE_PATH',
+      );
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+
   it('fails explicitly when the marketplace session is not configured', async () => {
     const configService = {
       get: jest.fn().mockReturnValue(undefined),
     } as unknown as ConfigService;
     const provider = new FileMarketplaceStorageStateProvider(configService);
 
-    await expect(
-      provider.getStorageState(Marketplace.MercadoLivre),
-    ).rejects.toEqual(
+    await expect(provider.getStorageState(Marketplace.Shopee)).rejects.toEqual(
       new BrowserSessionNotConfiguredError(
-        Marketplace.MercadoLivre,
-        'MERCADO_LIVRE_STORAGE_STATE_PATH',
+        Marketplace.Shopee,
+        'SHOPEE_STORAGE_STATE_PATH',
       ),
     );
   });

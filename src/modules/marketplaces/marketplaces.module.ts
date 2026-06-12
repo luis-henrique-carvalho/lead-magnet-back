@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { BrowserModule } from '../../infra/browser';
 import { AutomationTasksModule } from '../automation-tasks/automation-tasks.module';
 import { MarketplacesService } from './marketplaces.service';
 import { MarketplacesController } from './marketplaces.controller';
@@ -14,6 +15,7 @@ import { PrismaMarketplaceProductsRepository } from './products/prisma-marketpla
 
 @Module({
   imports: [
+    BrowserModule,
     AutomationTasksModule,
     BullModule.registerQueue({ name: MARKETPLACE_PRODUCT_SEARCH_QUEUE }),
   ],

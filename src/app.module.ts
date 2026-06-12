@@ -48,6 +48,7 @@ function getRedisPort(configService: ConfigService): number {
 
     AuthModule.forRoot({
       auth,
+      disableGlobalAuthGuard: true,
       bodyParser: {
         json: {
           limit: '2mb',
