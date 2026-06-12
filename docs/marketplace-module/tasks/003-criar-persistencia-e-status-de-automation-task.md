@@ -1,9 +1,9 @@
 ---
-title: "Criar persistencia e status de AutomationTask"
-status: "done"
-type: "AFK"
-epic: "docs/marketplace-module/epic.md"
-parent: "Docs/v2/marktplaces-modules.md"
+title: 'Criar persistencia e status de AutomationTask'
+status: 'done'
+type: 'AFK'
+epic: 'docs/marketplace-module/epic.md'
+parent: 'Docs/v2/marktplaces-modules.md'
 blocked_by: []
 user_stories: []
 ---
@@ -27,7 +27,7 @@ Criar o modulo `automation-tasks` para registrar tarefas de automacao, acompanha
 - [x] O service cria tasks como `pending` e permite marcar `processing`, `completed`, `partial`, `failed` e `manual_required`.
 - [x] `GET /automation-tasks/:id` retorna status, `statusUrl`, resultado, erro e tipo de erro quando existirem.
 - [x] Ha testes cobrindo criacao, consulta e transicoes principais de status.
-- [x] A secao `Result` documenta o comportamento entregue, os principais arquivos ou contratos, decisoes e limites relevantes e as validacoes executadas.
+- [x] A secao `Result` documenta o comportamento entregue, Diagrama Mermaid caso aplicavel, os principais arquivos ou contratos, Responsabilidade de cada arquivo, explicações sobre conceitos (caso aplicavel e necessario), decisoes e limites relevantes e as validacoes executadas.
 
 ## Result
 

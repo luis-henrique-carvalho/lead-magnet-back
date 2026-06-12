@@ -1,12 +1,12 @@
 ---
-title: "Implementar captura real parcial de link Amazon"
-status: "needs-triage"
-type: "HITL"
-epic: "docs/marketplace-module/epic.md"
-parent: "Docs/v2/marktplaces-modules.md"
+title: 'Implementar captura real parcial de link Amazon'
+status: 'needs-triage'
+type: 'HITL'
+epic: 'docs/marketplace-module/epic.md'
+parent: 'Docs/v2/marktplaces-modules.md'
 blocked_by:
   [
-    "docs/marketplace-module/tasks/008-adicionar-infraestrutura-de-browser-e-sessao-autenticada.md",
+    'docs/marketplace-module/tasks/008-adicionar-infraestrutura-de-browser-e-sessao-autenticada.md',
   ]
 user_stories: []
 ---
@@ -31,7 +31,7 @@ Substituir o provider fake de captura da Amazon por uma implementacao real ou pa
 - [ ] Sessao invalida ou bloqueio da plataforma nao derruba o worker sem atualizar a task.
 - [ ] O resultado salvo usa diretamente `capturedAffiliateUrl`, sem redirect/tracking proprio.
 - [ ] O fluxo foi validado manualmente contra uma conta/sessao real ou fixture aprovada.
-- [ ] A secao `Result` documenta o comportamento entregue, os principais arquivos ou contratos, decisoes e limites relevantes e as validacoes executadas.
+- [ ] A secao `Result` documenta o comportamento entregue, Diagrama Mermaid caso aplicavel, os principais arquivos ou contratos, Responsabilidade de cada arquivo, explicações sobre conceitos (caso aplicavel e necessario), decisoes e limites relevantes e as validacoes executadas.
 
 ## Blocked by
 

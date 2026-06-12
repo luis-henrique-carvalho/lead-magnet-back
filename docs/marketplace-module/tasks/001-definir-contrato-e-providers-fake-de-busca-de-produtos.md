@@ -1,9 +1,9 @@
 ---
-title: "Definir contrato e providers fake de busca de produtos"
-status: "done"
-type: "AFK"
-epic: "docs/marketplace-module/epic.md"
-parent: "Docs/v2/marktplaces-modules.md"
+title: 'Definir contrato e providers fake de busca de produtos'
+status: 'done'
+type: 'AFK'
+epic: 'docs/marketplace-module/epic.md'
+parent: 'Docs/v2/marktplaces-modules.md'
 blocked_by: []
 user_stories: []
 ---
@@ -27,7 +27,7 @@ Criar a base extensivel do modulo de marketplaces para busca de produtos, com en
 - [x] Mercado Livre e Amazon possuem providers fake retornando produtos normalizados e respeitando `limit`.
 - [x] O registry retorna o provider correto e falha de forma explicita quando o marketplace nao esta registrado.
 - [x] Ha testes cobrindo providers fake e registry.
-- [x] A secao `Result` documenta o comportamento entregue, os principais arquivos ou contratos, decisoes e limites relevantes e as validacoes executadas.
+- [x] A secao `Result` documenta o comportamento entregue, Diagrama Mermaid caso aplicavel, os principais arquivos ou contratos, Responsabilidade de cada arquivo, explicações sobre conceitos (caso aplicavel e necessario), decisoes e limites relevantes e as validacoes executadas.
 
 ## Result
 

@@ -1,12 +1,12 @@
 ---
-title: "Processar busca de produtos em worker"
-status: "done"
-type: "AFK"
-epic: "docs/marketplace-module/epic.md"
-parent: "Docs/v2/marktplaces-modules.md"
+title: 'Processar busca de produtos em worker'
+status: 'done'
+type: 'AFK'
+epic: 'docs/marketplace-module/epic.md'
+parent: 'Docs/v2/marktplaces-modules.md'
 blocked_by:
   [
-    "docs/marketplace-module/tasks/004-configurar-bullmq-e-transformar-busca-em-task-assincrona.md",
+    'docs/marketplace-module/tasks/004-configurar-bullmq-e-transformar-busca-em-task-assincrona.md',
   ]
 user_stories: []
 ---
@@ -31,7 +31,7 @@ Implementar o processor da fila `marketplace-product-search` para consumir jobs 
 - [x] Erros de CAPTCHA sao mapeados para `manual_required`.
 - [x] Timeouts e erros internos sao mapeados para tipos de erro apropriados e a task e marcada como `failed`.
 - [x] Ha testes cobrindo sucesso, CAPTCHA e falha generica.
-- [x] A secao `Result` documenta o comportamento entregue, os principais arquivos ou contratos, decisoes e limites relevantes e as validacoes executadas.
+- [x] A secao `Result` documenta o comportamento entregue, Diagrama Mermaid caso aplicavel, os principais arquivos ou contratos, Responsabilidade de cada arquivo, explicações sobre conceitos (caso aplicavel e necessario), decisoes e limites relevantes e as validacoes executadas.
 
 ## Result
 
