@@ -1,0 +1,5 @@
+export const MARKETPLACE_STORAGE_STATE_ENV = {
+  amazon: 'AMAZON_STORAGE_STATE_PATH',
+  mercado_livre: 'MERCADO_LIVRE_STORAGE_STATE_PATH',
+  shopee: 'SHOPEE_STORAGE_STATE_PATH',
+} as const;

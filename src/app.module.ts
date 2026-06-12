@@ -8,6 +8,7 @@ import { PrismaModule } from './infra/database/prisma/prisma.module';
 import { MarketplacesModule } from './modules/marketplaces/marketplaces.module';
 import { AutomationTasksModule } from './modules/automation-tasks/automation-tasks.module';
 import { AffiliateLinkCaptureModule } from './modules/affiliate-link-capture/affiliate-link-capture.module';
+import { BrowserModule } from './infra/browser';
 
 const DEFAULT_REDIS_PORT = 6379;
 
@@ -43,6 +44,7 @@ function getRedisPort(configService: ConfigService): number {
       }),
     }),
     PrismaModule,
+    BrowserModule,
 
     AuthModule.forRoot({
       auth,
