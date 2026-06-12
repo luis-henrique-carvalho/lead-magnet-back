@@ -1,4 +1,4 @@
-import { Marketplace } from '../../../shared/enums/marketplace.enum';
+import { Marketplace } from '../../../../shared/enums/marketplace.enum';
 
 import { AmazonProductProvider } from './amazon-product.provider';
 

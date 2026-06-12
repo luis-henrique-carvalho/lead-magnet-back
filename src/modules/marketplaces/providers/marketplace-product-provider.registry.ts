@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 
 import { Marketplace } from '../../../shared/enums/marketplace.enum';
 
-import { AmazonProductProvider } from './amazon-product.provider';
+import { AmazonProductProvider } from './amazon/amazon-product.provider';
 import { MarketplaceProductSearchProvider } from './marketplace-product-search-provider.interface';
-import { MercadoLivreProductProvider } from './mercado-livre-product.provider';
+import { MercadoLivreProductProvider } from './mercado-livre/mercado-livre-product.provider';
 
 @Injectable()
 export class MarketplaceProductProviderRegistry {

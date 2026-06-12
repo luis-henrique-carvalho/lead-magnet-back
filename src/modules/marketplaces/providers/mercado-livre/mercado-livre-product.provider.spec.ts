@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 
-import { Marketplace } from '../../../shared/enums/marketplace.enum';
-import { PlaywrightService } from '../../../infra/browser';
-import { MarketplaceProduct } from './marketplace-product-search-provider.interface';
+import { Marketplace } from '../../../../shared/enums/marketplace.enum';
+import { PlaywrightService } from '../../../../infra/browser';
+import { MarketplaceProduct } from '../marketplace-product-search-provider.interface';
+import { MercadoLivreProductProvider } from './mercado-livre-product.provider';
 import {
-  MercadoLivreProductProvider,
   normalizeMercadoLivreCard,
   parseMercadoLivrePrice,
-} from './mercado-livre-product.provider';
+} from './mercado-livre-product-parser.utils';
 
 type EvaluatedCard = {
   href: string;

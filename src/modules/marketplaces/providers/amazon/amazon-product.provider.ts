@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 
-import { Marketplace } from '../../../shared/enums/marketplace.enum';
+import { Marketplace } from '../../../../shared/enums/marketplace.enum';
 
 import {
   MarketplaceProduct,
   MarketplaceProductDetails,
   MarketplaceProductSearchProvider,
   SearchProductsInput,
-} from './marketplace-product-search-provider.interface';
+} from '../marketplace-product-search-provider.interface';
 
 // TODO: Implementar integração real com a API da Amazon usando AWS SDK ou scraping, e remover os produtos fake do catálogo.
 const AMAZON_FAKE_PRODUCTS: MarketplaceProduct[] = [

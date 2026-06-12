@@ -1,8 +1,8 @@
 import { Marketplace } from '../../../shared/enums/marketplace.enum';
 
-import { AmazonProductProvider } from './amazon-product.provider';
+import { AmazonProductProvider } from './amazon/amazon-product.provider';
 import { MarketplaceProductProviderRegistry } from './marketplace-product-provider.registry';
-import { MercadoLivreProductProvider } from './mercado-livre-product.provider';
+import { MercadoLivreProductProvider } from './mercado-livre/mercado-livre-product.provider';
 
 describe('MarketplaceProductProviderRegistry', () => {
   let amazonProductProvider: AmazonProductProvider;
@@ -10,7 +10,7 @@ describe('MarketplaceProductProviderRegistry', () => {
   let registry: MarketplaceProductProviderRegistry;
 
   beforeEach(() => {
-    mercadoLivreProductProvider = new MercadoLivreProductProvider();
+    mercadoLivreProductProvider = new MercadoLivreProductProvider({} as any);
     amazonProductProvider = new AmazonProductProvider();
     registry = new MarketplaceProductProviderRegistry(
       mercadoLivreProductProvider,
