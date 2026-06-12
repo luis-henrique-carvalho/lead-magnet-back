@@ -10,7 +10,7 @@ import {
   MARKETPLACE_PRODUCT_SEARCH_QUEUE,
   MarketplaceProductSearchJobData,
   SEARCH_PRODUCTS_JOB,
-} from './jobs/marketplace-product-search.job';
+} from './jobs/marketplace-product-search/marketplace-product-search.job';
 import { MarketplacesService } from './marketplaces.service';
 
 describe('MarketplacesService', () => {

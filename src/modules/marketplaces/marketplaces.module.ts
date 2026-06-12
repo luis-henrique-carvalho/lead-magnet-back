@@ -6,7 +6,8 @@ import { MarketplacesController } from './marketplaces.controller';
 import { AmazonProductProvider } from './providers/amazon-product.provider';
 import { MarketplaceProductProviderRegistry } from './providers/marketplace-product-provider.registry';
 import { MercadoLivreProductProvider } from './providers/mercado-livre-product.provider';
-import { MARKETPLACE_PRODUCT_SEARCH_QUEUE } from './jobs/marketplace-product-search.job';
+import { MARKETPLACE_PRODUCT_SEARCH_QUEUE } from './jobs/marketplace-product-search/marketplace-product-search.job';
+import { MarketplaceProductSearchProcessor } from './jobs/marketplace-product-search/marketplace-product-search.processor';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { MARKETPLACE_PRODUCT_SEARCH_QUEUE } from './jobs/marketplace-product-sea
     MercadoLivreProductProvider,
     AmazonProductProvider,
     MarketplaceProductProviderRegistry,
+    MarketplaceProductSearchProcessor,
   ],
   controllers: [MarketplacesController],
   exports: [MarketplaceProductProviderRegistry],
