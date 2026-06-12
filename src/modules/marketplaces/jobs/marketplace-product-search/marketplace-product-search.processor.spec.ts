@@ -7,6 +7,7 @@ import { AutomationErrorType } from '../../../../shared/enums/automation-error-t
 import { Marketplace } from '../../../../shared/enums/marketplace.enum';
 import { MarketplaceProductProviderRegistry } from '../../providers/marketplace-product-provider.registry';
 import { MarketplaceProductSearchProvider } from '../../providers/marketplace-product-search-provider.interface';
+import { MarketplaceProductsService } from '../../products/marketplace-products.service';
 import { MarketplaceProductSearchJobData } from './marketplace-product-search.job';
 import { MarketplaceProductSearchProcessor } from './marketplace-product-search.processor';
 
@@ -28,6 +29,9 @@ describe('MarketplaceProductSearchProcessor', () => {
   let markFailed: jest.MockedFunction<AutomationTasksService['markFailed']>;
   let markManualRequired: jest.MockedFunction<
     AutomationTasksService['markManualRequired']
+  >;
+  let saveSearchResults: jest.MockedFunction<
+    MarketplaceProductsService['saveSearchResults']
   >;
 
   const jobData: MarketplaceProductSearchJobData = {
@@ -57,6 +61,7 @@ describe('MarketplaceProductSearchProcessor', () => {
     markCompleted = jest.fn();
     markFailed = jest.fn();
     markManualRequired = jest.fn();
+    saveSearchResults = jest.fn().mockResolvedValue(2);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,6 +79,10 @@ describe('MarketplaceProductSearchProcessor', () => {
             markManualRequired,
           },
         },
+        {
+          provide: MarketplaceProductsService,
+          useValue: { saveSearchResults },
+        },
       ],
     }).compile();
 
@@ -85,7 +94,7 @@ describe('MarketplaceProductSearchProcessor', () => {
   });
 
   it('calls the selected provider and completes the task with result counters', async () => {
-    searchProducts.mockResolvedValue([
+    const products = [
       {
         externalId: 'AMZ-1',
         marketplace: Marketplace.Amazon,
@@ -98,12 +107,14 @@ describe('MarketplaceProductSearchProcessor', () => {
         title: 'Leitor digital premium',
         originalUrl: 'https://amazon.com.br/dp/AMZ-2',
       },
-    ]);
+    ];
+    searchProducts.mockResolvedValue(products);
 
     await expect(processor.process(createJob())).resolves.toEqual({
       searchId: 'search-id',
       requestedCount: 3,
       foundCount: 2,
+      savedCount: 2,
     });
     expect(markProcessing).toHaveBeenCalledWith('task-id');
     expect(getProvider).toHaveBeenCalledWith(Marketplace.Amazon);
@@ -113,11 +124,16 @@ describe('MarketplaceProductSearchProcessor', () => {
       category: 'eletronicos',
       limit: 3,
     });
+    expect(saveSearchResults).toHaveBeenCalledWith('search-id', products);
     expect(markCompleted).toHaveBeenCalledWith('task-id', {
       searchId: 'search-id',
       requestedCount: 3,
       foundCount: 2,
+      savedCount: 2,
     });
+    expect(saveSearchResults.mock.invocationCallOrder[0]).toBeLessThan(
+      markCompleted.mock.invocationCallOrder[0],
+    );
   });
 
   it('maps CAPTCHA errors to manual_required without retrying the job', async () => {
@@ -130,6 +146,7 @@ describe('MarketplaceProductSearchProcessor', () => {
       AutomationErrorType.CaptchaRequired,
     );
     expect(markFailed).not.toHaveBeenCalled();
+    expect(saveSearchResults).not.toHaveBeenCalled();
   });
 
   it('maps timeout errors to failed and rethrows for BullMQ retry', async () => {

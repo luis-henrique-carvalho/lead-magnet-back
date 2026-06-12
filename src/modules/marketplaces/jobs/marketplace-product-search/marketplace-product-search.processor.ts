@@ -5,6 +5,7 @@ import { Job } from 'bullmq';
 import { AutomationTasksService } from '../../../automation-tasks/automation-tasks.service';
 import { AutomationErrorType } from '../../../../shared/enums/automation-error-type.enum';
 import { MarketplaceProductProviderRegistry } from '../../providers/marketplace-product-provider.registry';
+import { MarketplaceProductsService } from '../../products/marketplace-products.service';
 import {
   MARKETPLACE_PRODUCT_SEARCH_QUEUE,
   MarketplaceProductSearchJobData,
@@ -23,6 +24,7 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
   constructor(
     private readonly providerRegistry: MarketplaceProductProviderRegistry,
     private readonly automationTasksService: AutomationTasksService,
+    private readonly marketplaceProductsService: MarketplaceProductsService,
   ) {
     super();
   }
@@ -42,10 +44,16 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
         category,
         limit,
       });
+      const savedCount =
+        await this.marketplaceProductsService.saveSearchResults(
+          searchId,
+          products,
+        );
       const result: MarketplaceProductSearchJobResult = {
         searchId,
         requestedCount: limit,
         foundCount: products.length,
+        savedCount,
       };
 
       await this.automationTasksService.markCompleted(taskId, result);

@@ -8,6 +8,9 @@ import { MarketplaceProductProviderRegistry } from './providers/marketplace-prod
 import { MercadoLivreProductProvider } from './providers/mercado-livre-product.provider';
 import { MARKETPLACE_PRODUCT_SEARCH_QUEUE } from './jobs/marketplace-product-search/marketplace-product-search.job';
 import { MarketplaceProductSearchProcessor } from './jobs/marketplace-product-search/marketplace-product-search.processor';
+import { MarketplaceProductsRepository } from './products/marketplace-products.repository';
+import { MarketplaceProductsService } from './products/marketplace-products.service';
+import { PrismaMarketplaceProductsRepository } from './products/prisma-marketplace-products.repository';
 
 @Module({
   imports: [
@@ -19,6 +22,11 @@ import { MarketplaceProductSearchProcessor } from './jobs/marketplace-product-se
     MercadoLivreProductProvider,
     AmazonProductProvider,
     MarketplaceProductProviderRegistry,
+    MarketplaceProductsService,
+    {
+      provide: MarketplaceProductsRepository,
+      useClass: PrismaMarketplaceProductsRepository,
+    },
     MarketplaceProductSearchProcessor,
   ],
   controllers: [MarketplacesController],

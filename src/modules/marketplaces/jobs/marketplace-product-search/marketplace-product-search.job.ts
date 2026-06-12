@@ -16,4 +16,5 @@ export type MarketplaceProductSearchJobResult = {
   searchId: string;
   requestedCount: number;
   foundCount: number;
+  savedCount: number;
 };
