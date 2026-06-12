@@ -1,33 +1,49 @@
-import { Injectable, UnprocessableEntityException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { Queue } from 'bullmq';
 
-import { MarketplaceProductResponseDto } from './dto/marketplace-product-response.dto';
+import { AutomationTasksService } from '../automation-tasks/automation-tasks.service';
+import { AutomationTaskType } from '../../shared/enums/automation-task-type.enum';
 import { SearchMarketplaceProductsDto } from './dto/search-marketplace-products.dto';
-import { MarketplaceProductProviderRegistry } from './providers/marketplace-product-provider.registry';
-import { MarketplaceProductSearchProvider } from './providers/marketplace-product-search-provider.interface';
+import { SearchMarketplaceProductsResponseDto } from './dto/search-marketplace-products-response.dto';
+import {
+  MARKETPLACE_PRODUCT_SEARCH_QUEUE,
+  MarketplaceProductSearchJobData,
+  SEARCH_PRODUCTS_JOB,
+} from './jobs/marketplace-product-search.job';
 
 @Injectable()
 export class MarketplacesService {
   constructor(
-    private readonly providerRegistry: MarketplaceProductProviderRegistry,
+    @InjectQueue(MARKETPLACE_PRODUCT_SEARCH_QUEUE)
+    private readonly marketplaceSearchQueue: Queue<MarketplaceProductSearchJobData>,
+    private readonly automationTasksService: AutomationTasksService,
   ) {}
 
   async searchProducts(
     input: SearchMarketplaceProductsDto,
-  ): Promise<MarketplaceProductResponseDto[]> {
-    let provider: MarketplaceProductSearchProvider;
+  ): Promise<SearchMarketplaceProductsResponseDto> {
+    const task = await this.automationTasksService.create({
+      type: AutomationTaskType.MarketplaceProductSearch,
+      marketplace: input.marketplace,
+    });
 
-    try {
-      provider = this.providerRegistry.getProvider(input.marketplace);
-    } catch {
-      throw new UnprocessableEntityException(
-        `Marketplace not supported: ${input.marketplace}`,
-      );
-    }
+    const searchId = randomUUID();
 
-    const products = await provider.searchProducts(input);
+    await this.marketplaceSearchQueue.add(SEARCH_PRODUCTS_JOB, {
+      taskId: task.id,
+      searchId,
+      marketplace: input.marketplace,
+      query: input.query,
+      category: input.category,
+      limit: input.limit,
+    });
 
-    return products.map((product) =>
-      MarketplaceProductResponseDto.fromProduct(product),
-    );
+    return {
+      taskId: task.id,
+      statusUrl: `/automation-tasks/${task.id}`,
+      searchId,
+    };
   }
 }

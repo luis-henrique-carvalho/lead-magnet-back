@@ -1,36 +1,39 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import { getQueueToken } from '@nestjs/bullmq';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Queue } from 'bullmq';
 
+import { AutomationTasksService } from '../automation-tasks/automation-tasks.service';
+import { AutomationTaskStatus } from '../../shared/enums/automation-task-status.enum';
+import { AutomationTaskType } from '../../shared/enums/automation-task-type.enum';
 import { Marketplace } from '../../shared/enums/marketplace.enum';
-import { MarketplaceProductProviderRegistry } from './providers/marketplace-product-provider.registry';
-import { MarketplaceProductSearchProvider } from './providers/marketplace-product-search-provider.interface';
+import {
+  MARKETPLACE_PRODUCT_SEARCH_QUEUE,
+  MarketplaceProductSearchJobData,
+  SEARCH_PRODUCTS_JOB,
+} from './jobs/marketplace-product-search.job';
 import { MarketplacesService } from './marketplaces.service';
 
 describe('MarketplacesService', () => {
-  let provider: jest.Mocked<MarketplaceProductSearchProvider>;
-  let registry: jest.Mocked<MarketplaceProductProviderRegistry>;
+  let addJob: jest.MockedFunction<
+    Queue<MarketplaceProductSearchJobData>['add']
+  >;
+  let createTask: jest.MockedFunction<AutomationTasksService['create']>;
   let service: MarketplacesService;
-  let getProvider: jest.Mock;
-  let searchProducts: jest.Mock;
 
   beforeEach(async () => {
-    getProvider = jest.fn();
-    searchProducts = jest.fn();
-    provider = {
-      marketplace: Marketplace.MercadoLivre,
-      getProductDetails: jest.fn(),
-      searchProducts,
-    };
-    registry = {
-      getProvider,
-    } as unknown as jest.Mocked<MarketplaceProductProviderRegistry>;
+    addJob = jest.fn();
+    createTask = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MarketplacesService,
         {
-          provide: MarketplaceProductProviderRegistry,
-          useValue: registry,
+          provide: getQueueToken(MARKETPLACE_PRODUCT_SEARCH_QUEUE),
+          useValue: { add: addJob },
+        },
+        {
+          provide: AutomationTasksService,
+          useValue: { create: createTask },
         },
       ],
     }).compile();
@@ -38,49 +41,48 @@ describe('MarketplacesService', () => {
     service = module.get(MarketplacesService);
   });
 
-  it('uses the registered provider and returns normalized public products', async () => {
-    getProvider.mockReturnValue(provider);
-    searchProducts.mockResolvedValue([
-      {
-        marketplace: Marketplace.MercadoLivre,
-        title: 'Headphone Bluetooth',
-        originalUrl: 'https://www.mercadolivre.com.br/headphone',
-        price: 249.9,
-        rawData: { internal: true },
-      },
-    ]);
-
-    const input = {
-      marketplace: Marketplace.MercadoLivre,
-      query: 'headphone',
-      category: 'eletronicos',
-      limit: 5,
-    };
-    const result = await service.searchProducts(input);
-
-    expect(getProvider).toHaveBeenCalledWith(Marketplace.MercadoLivre);
-    expect(searchProducts).toHaveBeenCalledWith(input);
-    expect(result).toEqual([
-      expect.objectContaining({
-        marketplace: Marketplace.MercadoLivre,
-        title: 'Headphone Bluetooth',
-        originalUrl: 'https://www.mercadolivre.com.br/headphone',
-        price: 249.9,
-      }),
-    ]);
-    expect(result[0]).not.toHaveProperty('rawData');
-  });
-
-  it('throws an HTTP exception when the marketplace has no provider', async () => {
-    getProvider.mockImplementation(() => {
-      throw new Error('Provider not registered');
+  it('creates an automation task and queues the product search', async () => {
+    createTask.mockResolvedValue({
+      id: 'task-id',
+      type: AutomationTaskType.MarketplaceProductSearch,
+      marketplace: Marketplace.Amazon,
+      status: AutomationTaskStatus.Pending,
+      result: null,
+      error: null,
+      errorType: null,
+      attempts: 0,
+      startedAt: null,
+      finishedAt: null,
+      createdAt: new Date('2026-06-12T00:00:00.000Z'),
+      updatedAt: new Date('2026-06-12T00:00:00.000Z'),
     });
 
-    await expect(
-      service.searchProducts({
-        marketplace: Marketplace.Shopee,
-        limit: 10,
-      }),
-    ).rejects.toThrow(UnprocessableEntityException);
+    const result = await service.searchProducts({
+      marketplace: Marketplace.Amazon,
+      query: 'leitor',
+      category: 'eletronicos',
+      limit: 3,
+    });
+
+    expect(createTask).toHaveBeenCalledWith({
+      type: AutomationTaskType.MarketplaceProductSearch,
+      marketplace: Marketplace.Amazon,
+    });
+    expect(addJob).toHaveBeenCalledWith(SEARCH_PRODUCTS_JOB, {
+      taskId: 'task-id',
+      searchId: result.searchId,
+      marketplace: Marketplace.Amazon,
+      query: 'leitor',
+      category: 'eletronicos',
+      limit: 3,
+    });
+    expect(result).toEqual({
+      taskId: 'task-id',
+      statusUrl: '/automation-tasks/task-id',
+      searchId: result.searchId,
+    });
+    expect(result.searchId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
   });
 });

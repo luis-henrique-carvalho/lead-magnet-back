@@ -1,13 +1,8 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import {
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiTags,
-  ApiUnprocessableEntityResponse,
-} from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { MarketplaceProductResponseDto } from './dto/marketplace-product-response.dto';
 import { SearchMarketplaceProductsDto } from './dto/search-marketplace-products.dto';
+import { SearchMarketplaceProductsResponseDto } from './dto/search-marketplace-products-response.dto';
 import { MarketplacesService } from './marketplaces.service';
 
 @ApiTags('marketplaces')
@@ -16,14 +11,11 @@ export class MarketplacesController {
   constructor(private readonly marketplacesService: MarketplacesService) {}
 
   @Post('search')
-  @ApiOperation({ summary: 'Search fake products in a marketplace' })
-  @ApiCreatedResponse({ type: MarketplaceProductResponseDto, isArray: true })
-  @ApiUnprocessableEntityResponse({
-    description: 'The marketplace has no registered search provider',
-  })
+  @ApiOperation({ summary: 'Queue a marketplace product search' })
+  @ApiCreatedResponse({ type: SearchMarketplaceProductsResponseDto })
   search(
     @Body() input: SearchMarketplaceProductsDto,
-  ): Promise<MarketplaceProductResponseDto[]> {
+  ): Promise<SearchMarketplaceProductsResponseDto> {
     return this.marketplacesService.searchProducts(input);
   }
 }

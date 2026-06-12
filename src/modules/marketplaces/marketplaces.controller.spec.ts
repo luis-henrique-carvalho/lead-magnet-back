@@ -1,8 +1,4 @@
-import {
-  INestApplication,
-  UnprocessableEntityException,
-  ValidationPipe,
-} from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Server } from 'node:http';
 import request from 'supertest';
@@ -43,14 +39,12 @@ describe('MarketplacesController', () => {
   });
 
   it('delegates POST /marketplaces/search to the service', async () => {
-    const products = [
-      {
-        marketplace: Marketplace.Amazon,
-        title: 'Leitor digital',
-        originalUrl: 'https://www.amazon.com.br/dp/example',
-      },
-    ];
-    service.searchProducts.mockResolvedValue(products);
+    const response = {
+      taskId: 'task-id',
+      statusUrl: '/automation-tasks/task-id',
+      searchId: 'search-id',
+    };
+    service.searchProducts.mockResolvedValue(response);
 
     await request(httpServer)
       .post('/marketplaces/search')
@@ -61,7 +55,7 @@ describe('MarketplacesController', () => {
         limit: 3,
       })
       .expect(201)
-      .expect(products);
+      .expect(response);
 
     expect(service.searchProducts).toHaveBeenCalledWith({
       marketplace: Marketplace.Amazon,
@@ -72,13 +66,16 @@ describe('MarketplacesController', () => {
   });
 
   it('applies the default limit', async () => {
-    service.searchProducts.mockResolvedValue([]);
+    service.searchProducts.mockResolvedValue({
+      taskId: 'task-id',
+      statusUrl: '/automation-tasks/task-id',
+      searchId: 'search-id',
+    });
 
     await request(httpServer)
       .post('/marketplaces/search')
       .send({ marketplace: Marketplace.MercadoLivre })
-      .expect(201)
-      .expect([]);
+      .expect(201);
 
     expect(service.searchProducts).toHaveBeenCalledWith({
       marketplace: Marketplace.MercadoLivre,
@@ -93,24 +90,5 @@ describe('MarketplacesController', () => {
       .expect(400);
 
     expect(service.searchProducts).not.toHaveBeenCalled();
-  });
-
-  it('returns HTTP 422 when the marketplace has no provider', async () => {
-    service.searchProducts.mockRejectedValue(
-      new UnprocessableEntityException('Marketplace not supported: shopee'),
-    );
-
-    await request(httpServer)
-      .post('/marketplaces/search')
-      .send({ marketplace: Marketplace.Shopee })
-      .expect(422)
-      .expect(({ body }) => {
-        expect(body).toEqual(
-          expect.objectContaining({
-            message: 'Marketplace not supported: shopee',
-            statusCode: 422,
-          }),
-        );
-      });
   });
 });
