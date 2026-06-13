@@ -75,3 +75,87 @@ model Verification {
   @@index([identifier])
   @@map("verification")
 }
+
+enum AutomationTaskStatus {
+  pending
+  processing
+  completed
+  partial
+  failed
+  manual_required
+}
+
+enum AutomationTaskType {
+  marketplace_product_search
+  fetch_rendered_html
+  affiliate_link_capture
+  content_generation
+  publication
+}
+
+enum AutomationErrorType {
+  timeout
+  upstream_error
+  validation_error
+  internal_error
+  auth_error
+  throttling
+  session_invalid
+  layout_changed
+  captcha_required
+  manual_required
+}
+
+model AutomationTask {
+  id          String               @id @default(uuid())
+  type        AutomationTaskType
+  marketplace String?
+  status      AutomationTaskStatus @default(pending)
+  result      Json?
+  error       String?
+  errorType   AutomationErrorType?
+  attempts    Int                  @default(0)
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@map("automation_task")
+}
+
+model MarketplaceProduct {
+  id            String                           @id @default(uuid())
+  externalId    String?
+  marketplace   String
+  title         String
+  originalUrl   String
+  imageUrl      String?
+  price         Decimal?                         @db.Decimal(12, 2)
+  rating        Float?
+  reviewsCount  Int?
+  salesCount    Int?
+  category      String?
+  rawData       Json?
+  createdAt     DateTime                         @default(now())
+  updatedAt     DateTime                         @updatedAt
+  searchResults MarketplaceProductSearchResult[]
+
+  @@unique([marketplace, originalUrl])
+  @@index([externalId])
+  @@map("marketplace_product")
+}
+
+model MarketplaceProductSearchResult {
+  id           String             @id @default(uuid())
+  searchId     String
+  productId    String
+  discoveredAt DateTime           @default(now())
+  product      MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([searchId, productId])
+  @@index([searchId])
+  @@index([productId])
+  @@map("marketplace_product_search_result")
+}

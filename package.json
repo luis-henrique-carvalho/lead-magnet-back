@@ -17,11 +17,18 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "pw:install": "playwright install chromium",
+    "pw:ml:save-session": "node scripts/playwright-ml-save-session.mjs",
+    "pw:codegen:ml": "playwright codegen --browser=chromium --load-storage=.auth/mercadolivre-storage-state.json https://www.mercadolivre.com.br/afiliados/hub?is_affiliate=true#menu-user",
+    "pw:ml:open": "PWDEBUG=1 node scripts/playwright-ml-playground.mjs",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.6.16",
+    "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.4",
@@ -30,6 +37,10 @@
     "@scalar/nestjs-api-reference": "^1.2.2",
     "@thallesp/nestjs-better-auth": "^2.6.1",
     "better-auth": "^1.6.16",
+    "bullmq": "^5.78.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "playwright": "^1.60.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
