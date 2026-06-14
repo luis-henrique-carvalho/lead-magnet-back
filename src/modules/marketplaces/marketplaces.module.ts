@@ -17,6 +17,10 @@ import { MarketplaceProductSearchesService } from './searches/marketplace-produc
 import { PrismaMarketplaceProductSearchesRepository } from './searches/prisma-marketplace-product-searches.repository';
 import { MarketplaceProductSearchesController } from './searches/marketplace-product-searches.controller';
 import { MarketplaceProductsController } from './products/marketplace-products.controller';
+import { MarketplaceSearchResultsController } from './search-results/marketplace-search-results.controller';
+import { MarketplaceSearchResultsRepository } from './search-results/marketplace-search-results.repository';
+import { MarketplaceSearchResultsService } from './search-results/marketplace-search-results.service';
+import { PrismaMarketplaceSearchResultsRepository } from './search-results/prisma-marketplace-search-results.repository';
 
 @Module({
   imports: [
@@ -31,6 +35,7 @@ import { MarketplaceProductsController } from './products/marketplace-products.c
     MarketplaceProductProviderRegistry,
     MarketplaceProductsService,
     MarketplaceProductSearchesService,
+    MarketplaceSearchResultsService,
     {
       provide: MarketplaceProductsRepository,
       useClass: PrismaMarketplaceProductsRepository,
@@ -39,12 +44,17 @@ import { MarketplaceProductsController } from './products/marketplace-products.c
       provide: MarketplaceProductSearchesRepository,
       useClass: PrismaMarketplaceProductSearchesRepository,
     },
+    {
+      provide: MarketplaceSearchResultsRepository,
+      useClass: PrismaMarketplaceSearchResultsRepository,
+    },
     MarketplaceProductSearchProcessor,
   ],
   controllers: [
     MarketplacesController,
     MarketplaceProductSearchesController,
     MarketplaceProductsController,
+    MarketplaceSearchResultsController,
   ],
   exports: [MarketplaceProductProviderRegistry],
 })
