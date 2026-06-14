@@ -6,13 +6,13 @@ jest.mock('@thallesp/nestjs-better-auth', () => ({
   Session: () => () => undefined,
 }));
 
-import { AutomationTaskStatus } from '../../../shared/enums/automation-task-status.enum';
-import { AutomationTaskType } from '../../../shared/enums/automation-task-type.enum';
+import { AutomationTaskStatus } from '../../../../shared/enums/automation-task-status.enum';
+import { AutomationTaskType } from '../../../../shared/enums/automation-task-type.enum';
 import { AutomationTaskEventsController } from './automation-task-events.controller';
 import {
   AutomationTaskDomainEvent,
   AutomationTaskEventsSubscriber,
-} from './automation-task-events.subscriber';
+} from '../interfaces/automation-task-events.subscriber';
 
 describe('AutomationTaskEventsController', () => {
   it('opens an SSE stream and forwards typed task events', () => {

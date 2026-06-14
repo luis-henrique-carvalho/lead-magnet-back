@@ -6,12 +6,12 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { Subject } from 'rxjs';
-import { AutomationTaskStatus } from '../../../shared/enums/automation-task-status.enum';
-import { AutomationTaskType } from '../../../shared/enums/automation-task-type.enum';
+import { AutomationTaskStatus } from '../../../../shared/enums/automation-task-status.enum';
+import { AutomationTaskType } from '../../../../shared/enums/automation-task-type.enum';
 import {
   AutomationTaskDomainEvent,
   AutomationTaskEventsSubscriber,
-} from './automation-task-events.subscriber';
+} from '../interfaces/automation-task-events.subscriber';
 import {
   AUTOMATION_TASK_EVENTS_CHANNEL,
   AUTOMATION_TASK_EVENTS_REDIS_SUBSCRIBER,

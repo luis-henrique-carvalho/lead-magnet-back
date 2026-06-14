@@ -3,11 +3,11 @@ import { randomUUID } from 'node:crypto';
 import {
   AutomationTaskEventsPublisher,
   PublishableAutomationTask,
-} from './automation-task-events.publisher';
+} from '../interfaces/automation-task-events.publisher';
 import {
   AutomationTaskDomainEvent,
   AutomationTaskEventType,
-} from './automation-task-events.subscriber';
+} from '../interfaces/automation-task-events.subscriber';
 import {
   AUTOMATION_TASK_EVENTS_CHANNEL,
   AUTOMATION_TASK_EVENTS_REDIS_PUBLISHER,

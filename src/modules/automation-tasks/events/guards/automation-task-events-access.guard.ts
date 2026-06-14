@@ -5,7 +5,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { AutomationTaskEventsAccessPolicy } from './automation-task-events-access.policy';
+import { AutomationTaskEventsAccessPolicy } from '../policies/automation-task-events-access.policy';
 
 type AuthenticatedRequest = {
   session?: { user?: { id?: string } };

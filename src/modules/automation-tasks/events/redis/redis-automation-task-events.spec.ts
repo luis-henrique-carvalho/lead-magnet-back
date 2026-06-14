@@ -1,6 +1,6 @@
 import { firstValueFrom } from 'rxjs';
-import { AutomationTaskStatus } from '../../../shared/enums/automation-task-status.enum';
-import { AutomationTaskType } from '../../../shared/enums/automation-task-type.enum';
+import { AutomationTaskStatus } from '../../../../shared/enums/automation-task-status.enum';
+import { AutomationTaskType } from '../../../../shared/enums/automation-task-type.enum';
 import { RedisAutomationTaskEventsPublisher } from './redis-automation-task-events.publisher';
 import { RedisAutomationTaskEventsSubscriber } from './redis-automation-task-events.subscriber';
 import { RedisPubSubClient } from './redis-pub-sub-client';

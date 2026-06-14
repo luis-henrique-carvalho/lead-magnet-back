@@ -1,4 +1,4 @@
-import { AutomationTask } from '../automation-task.types';
+import { AutomationTask } from '../../automation-task.types';
 import {
   AutomationTaskDomainEvent,
   AutomationTaskEventType,

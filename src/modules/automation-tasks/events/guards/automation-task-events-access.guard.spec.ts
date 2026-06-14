@@ -1,6 +1,6 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { AutomationTaskEventsAccessGuard } from './automation-task-events-access.guard';
-import { AutomationTaskEventsAccessPolicy } from './automation-task-events-access.policy';
+import { AutomationTaskEventsAccessPolicy } from '../policies/automation-task-events-access.policy';
 
 describe('AutomationTaskEventsAccessGuard', () => {
   const request = (userId?: string) => ({

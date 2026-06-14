@@ -7,11 +7,11 @@ import {
 } from '@nestjs/swagger';
 import { AuthGuard, Session } from '@thallesp/nestjs-better-auth';
 import { Subscription } from 'rxjs';
-import { AutomationTaskEventsAccessGuard } from './automation-task-events-access.guard';
+import { AutomationTaskEventsAccessGuard } from '../guards/automation-task-events-access.guard';
 import {
   AutomationTaskDomainEvent,
   AutomationTaskEventsSubscriber,
-} from './automation-task-events.subscriber';
+} from '../interfaces/automation-task-events.subscriber';
 
 const HEARTBEAT_INTERVAL_MS = 15_000;
 const RETRY_INTERVAL_MS = 3_000;

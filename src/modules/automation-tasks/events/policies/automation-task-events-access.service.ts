@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../infra/database/prisma/prisma.service';
+import { PrismaService } from '../../../../infra/database/prisma/prisma.service';
 import { AutomationTaskEventsAccessPolicy } from './automation-task-events-access.policy';
 
 @Injectable()
