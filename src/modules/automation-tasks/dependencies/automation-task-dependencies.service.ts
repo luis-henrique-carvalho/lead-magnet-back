@@ -39,4 +39,24 @@ export class AutomationTaskDependenciesService {
   findPending(successorId: string) {
     return this.repository.findPending(successorId);
   }
+
+  async findDependencies(successorId: string) {
+    const dependencies = await this.repository.findDependencies(successorId);
+
+    if (dependencies === null) {
+      throw new NotFoundException('Automation task not found');
+    }
+
+    return dependencies;
+  }
+
+  async findDependents(predecessorId: string) {
+    const dependents = await this.repository.findDependents(predecessorId);
+
+    if (dependents === null) {
+      throw new NotFoundException('Automation task not found');
+    }
+
+    return dependents;
+  }
 }

@@ -1,4 +1,4 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Server } from 'node:http';
 import request from 'supertest';
@@ -9,7 +9,12 @@ import { AutomationTaskDependenciesService } from './automation-task-dependencie
 describe('AutomationTaskDependenciesController', () => {
   let app: INestApplication;
   let httpServer: Server;
-  const service = { add: jest.fn(), findPending: jest.fn() };
+  const service = {
+    add: jest.fn(),
+    findDependencies: jest.fn(),
+    findDependents: jest.fn(),
+    findPending: jest.fn(),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -49,5 +54,47 @@ describe('AutomationTaskDependenciesController', () => {
       .expect(dependencies);
 
     expect(service.findPending).toHaveBeenCalledWith('successor-id');
+  });
+
+  it('returns all predecessors, including completed tasks', async () => {
+    const dependencies = [
+      {
+        taskId: 'predecessor-id',
+        type: 'marketplace_product_search',
+        status: 'completed',
+        direction: 'predecessor',
+        required: true,
+        createdAt: '2026-06-14T10:00:00.000Z',
+      },
+    ];
+    service.findDependencies.mockResolvedValue(dependencies);
+
+    await request(httpServer)
+      .get('/automation-tasks/successor-id/dependencies')
+      .expect(200)
+      .expect(dependencies);
+
+    expect(service.findDependencies).toHaveBeenCalledWith('successor-id');
+  });
+
+  it('returns all successors that depend on the task', async () => {
+    service.findDependents.mockResolvedValue([]);
+
+    await request(httpServer)
+      .get('/automation-tasks/predecessor-id/dependents')
+      .expect(200)
+      .expect([]);
+
+    expect(service.findDependents).toHaveBeenCalledWith('predecessor-id');
+  });
+
+  it('returns 404 when navigating dependencies of a missing task', async () => {
+    service.findDependencies.mockRejectedValue(
+      new NotFoundException('Automation task not found'),
+    );
+
+    await request(httpServer)
+      .get('/automation-tasks/missing/dependencies')
+      .expect(404);
   });
 });

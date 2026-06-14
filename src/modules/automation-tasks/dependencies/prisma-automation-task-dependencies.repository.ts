@@ -5,9 +5,11 @@ import { PrismaService } from '../../../infra/database/prisma/prisma.service';
 import { AutomationTaskStatus } from '../../../shared/enums/automation-task-status.enum';
 import {
   AddAutomationTaskDependencyResult,
+  AutomationTaskDependencyNavigation,
   AutomationTaskDependenciesRepository,
   PendingAutomationTaskDependency,
 } from './automation-task-dependencies.repository';
+import { AutomationTaskDependencyDirection } from './dto/automation-task-dependency-response.dto';
 
 const DEPENDENCY_GRAPH_LOCK_ID = 1_846_273_951;
 
@@ -95,6 +97,70 @@ export class PrismaAutomationTaskDependenciesRepository implements AutomationTas
     return dependencies.map((dependency) => ({
       predecessorId: dependency.predecessorId,
       status: dependency.predecessor.status as AutomationTaskStatus,
+    }));
+  }
+
+  async findDependencies(
+    successorId: string,
+  ): Promise<AutomationTaskDependencyNavigation[] | null> {
+    const task = await this.prisma.automationTask.findUnique({
+      where: { id: successorId },
+      select: {
+        successorLinks: {
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: {
+            required: true,
+            createdAt: true,
+            predecessor: {
+              select: { id: true, type: true, status: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!task) return null;
+
+    return task.successorLinks.map((link) => ({
+      taskId: link.predecessor.id,
+      type: link.predecessor.type as AutomationTaskDependencyNavigation['type'],
+      status: link.predecessor
+        .status as AutomationTaskDependencyNavigation['status'],
+      direction: AutomationTaskDependencyDirection.Predecessor,
+      required: link.required,
+      createdAt: link.createdAt,
+    }));
+  }
+
+  async findDependents(
+    predecessorId: string,
+  ): Promise<AutomationTaskDependencyNavigation[] | null> {
+    const task = await this.prisma.automationTask.findUnique({
+      where: { id: predecessorId },
+      select: {
+        predecessorLinks: {
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          select: {
+            required: true,
+            createdAt: true,
+            successor: {
+              select: { id: true, type: true, status: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!task) return null;
+
+    return task.predecessorLinks.map((link) => ({
+      taskId: link.successor.id,
+      type: link.successor.type as AutomationTaskDependencyNavigation['type'],
+      status: link.successor
+        .status as AutomationTaskDependencyNavigation['status'],
+      direction: AutomationTaskDependencyDirection.Successor,
+      required: link.required,
+      createdAt: link.createdAt,
     }));
   }
 }

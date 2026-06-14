@@ -1,8 +1,19 @@
 import { AutomationTaskStatus } from '../../../shared/enums/automation-task-status.enum';
+import { AutomationTaskType } from '../../../shared/enums/automation-task-type.enum';
+import { AutomationTaskDependencyDirection } from './dto/automation-task-dependency-response.dto';
 
 export type PendingAutomationTaskDependency = {
   predecessorId: string;
   status: AutomationTaskStatus;
+};
+
+export type AutomationTaskDependencyNavigation = {
+  taskId: string;
+  type: AutomationTaskType;
+  status: AutomationTaskStatus;
+  direction: AutomationTaskDependencyDirection;
+  required: boolean;
+  createdAt: Date;
 };
 
 export enum AddAutomationTaskDependencyResult {
@@ -20,4 +31,10 @@ export abstract class AutomationTaskDependenciesRepository {
   abstract findPending(
     successorId: string,
   ): Promise<PendingAutomationTaskDependency[]>;
+  abstract findDependencies(
+    successorId: string,
+  ): Promise<AutomationTaskDependencyNavigation[] | null>;
+  abstract findDependents(
+    predecessorId: string,
+  ): Promise<AutomationTaskDependencyNavigation[] | null>;
 }

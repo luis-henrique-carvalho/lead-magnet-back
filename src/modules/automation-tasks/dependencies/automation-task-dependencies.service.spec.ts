@@ -22,6 +22,8 @@ describe('AutomationTaskDependenciesService', () => {
       .mockResolvedValue(AddAutomationTaskDependencyResult.Created);
     repository = {
       add: addDependency,
+      findDependencies: jest.fn(),
+      findDependents: jest.fn(),
       findPending: jest.fn(),
     };
 
@@ -82,5 +84,25 @@ describe('AutomationTaskDependenciesService', () => {
     await expect(service.add('predecessor-id', 'successor-id')).rejects.toThrow(
       ConflictException,
     );
+  });
+
+  it('returns dependency navigation for an existing task', async () => {
+    repository.findDependencies.mockResolvedValue([]);
+
+    await expect(service.findDependencies('task-id')).resolves.toEqual([]);
+  });
+
+  it('rejects dependency navigation for a missing task', async () => {
+    repository.findDependencies.mockResolvedValue(null);
+
+    await expect(service.findDependencies('missing')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('returns dependent navigation for an existing task', async () => {
+    repository.findDependents.mockResolvedValue([]);
+
+    await expect(service.findDependents('task-id')).resolves.toEqual([]);
   });
 });

@@ -4,8 +4,10 @@ import { Prisma } from '../../../infra/database/prisma/generated/prisma/client';
 import { PrismaService } from '../../../infra/database/prisma/prisma.service';
 import {
   MarketplaceProductsRepository,
+  PaginatedMarketplaceProductSearches,
   PersistMarketplaceProductInput,
 } from './marketplace-products.repository';
+import { Pagination } from '../searches/marketplace-product-searches.repository';
 
 @Injectable()
 export class PrismaMarketplaceProductsRepository implements MarketplaceProductsRepository {
@@ -81,5 +83,64 @@ export class PrismaMarketplaceProductsRepository implements MarketplaceProductsR
     }
 
     return value;
+  }
+
+  async findSearches(
+    productId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedMarketplaceProductSearches | null> {
+    const product = await this.prisma.marketplaceProduct.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
+
+    if (!product) return null;
+
+    const where = { productId, searchId: { not: null } };
+    const [total, results] = await this.prisma.$transaction([
+      this.prisma.marketplaceProductSearchResult.count({ where }),
+      this.prisma.marketplaceProductSearchResult.findMany({
+        where,
+        skip: (pagination.page - 1) * pagination.limit,
+        take: pagination.limit,
+        orderBy: [{ discoveredAt: 'desc' }, { id: 'desc' }],
+        select: {
+          id: true,
+          discoveredAt: true,
+          search: {
+            select: {
+              id: true,
+              taskId: true,
+              marketplace: true,
+              query: true,
+              category: true,
+              requestedLimit: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      items: results.flatMap((result) => {
+        if (!result.search) return [];
+
+        return [
+          {
+            searchId: result.search.id,
+            taskId: result.search.taskId,
+            marketplace: result.search
+              .marketplace as PaginatedMarketplaceProductSearches['items'][number]['marketplace'],
+            query: result.search.query,
+            category: result.search.category,
+            requestedLimit: result.search.requestedLimit,
+            discoveredAt: result.discoveredAt,
+          },
+        ];
+      }),
+      ...pagination,
+      total,
+      legacyAssociationsExcluded: true,
+    };
   }
 }

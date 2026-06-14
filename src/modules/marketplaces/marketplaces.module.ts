@@ -15,6 +15,8 @@ import { PrismaMarketplaceProductsRepository } from './products/prisma-marketpla
 import { MarketplaceProductSearchesRepository } from './searches/marketplace-product-searches.repository';
 import { MarketplaceProductSearchesService } from './searches/marketplace-product-searches.service';
 import { PrismaMarketplaceProductSearchesRepository } from './searches/prisma-marketplace-product-searches.repository';
+import { MarketplaceProductSearchesController } from './searches/marketplace-product-searches.controller';
+import { MarketplaceProductsController } from './products/marketplace-products.controller';
 
 @Module({
   imports: [
@@ -39,7 +41,11 @@ import { PrismaMarketplaceProductSearchesRepository } from './searches/prisma-ma
     },
     MarketplaceProductSearchProcessor,
   ],
-  controllers: [MarketplacesController],
+  controllers: [
+    MarketplacesController,
+    MarketplaceProductSearchesController,
+    MarketplaceProductsController,
+  ],
   exports: [MarketplaceProductProviderRegistry],
 })
 export class MarketplacesModule {}
