@@ -63,12 +63,9 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
         );
         products = products.map((p) => ({ ...p, category: input.category }));
       }
-
-      const filtered = this.filterProducts(products, input);
-      this.logger.log(
-        `Scraping complete. Found ${products.length} products total, ${filtered.length} matching filters. Returning up to ${input.limit}.`,
-      );
-      return filtered.slice(0, input.limit);
+      // TODO: Remover o filtro de categoria,
+      // pois a busca já é feita com base na query e categoria, e o filtro manual pode ser impreciso ou redundante
+      return products.slice(0, input.limit);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
