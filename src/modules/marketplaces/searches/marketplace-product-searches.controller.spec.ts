@@ -14,6 +14,7 @@ describe('MarketplaceProductSearchesController', () => {
   let app: INestApplication;
   let httpServer: Server;
   const service = {
+    findAffiliateLinkCaptureTasks: jest.fn(),
     findById: jest.fn(),
     findProducts: jest.fn(),
   };
@@ -94,6 +95,50 @@ describe('MarketplaceProductSearchesController', () => {
 
     await request(httpServer)
       .get('/marketplace-searches/missing/products')
+      .expect(404);
+  });
+
+  it('returns only affiliate capture tasks linked to the search graph', async () => {
+    const response = {
+      items: [
+        {
+          taskId: 'capture-task-id',
+          status: 'completed',
+          marketplace: 'amazon',
+          productId: 'product-id',
+          productTitle: 'Kindle',
+          originalProductUrl: 'https://amazon.com.br/dp/B000000001',
+          capturedAffiliateUrl: 'https://amzn.to/example',
+          taskCreatedAt: '2026-06-14T10:00:00.000Z',
+          startedAt: '2026-06-14T10:00:10.000Z',
+          finishedAt: '2026-06-14T10:00:30.000Z',
+          capturedAt: '2026-06-14T10:00:30.000Z',
+        },
+      ],
+      page: 1,
+      limit: 20,
+      total: 1,
+    };
+    service.findAffiliateLinkCaptureTasks.mockResolvedValue(response);
+
+    await request(httpServer)
+      .get('/marketplace-searches/search-id/affiliate-link-capture-tasks')
+      .expect(200)
+      .expect(response);
+
+    expect(service.findAffiliateLinkCaptureTasks).toHaveBeenCalledWith(
+      'search-id',
+      { page: 1, limit: 20 },
+    );
+  });
+
+  it('returns 404 for capture tasks of a missing search', async () => {
+    service.findAffiliateLinkCaptureTasks.mockRejectedValue(
+      new NotFoundException('Marketplace search not found'),
+    );
+
+    await request(httpServer)
+      .get('/marketplace-searches/missing/affiliate-link-capture-tasks')
       .expect(404);
   });
 });

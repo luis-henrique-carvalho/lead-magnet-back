@@ -35,6 +35,6 @@ import { PrismaAutomationTaskAttemptsRepository } from './attempts/prisma-automa
       useClass: PrismaAutomationTaskAttemptsRepository,
     },
   ],
-  exports: [AutomationTasksService],
+  exports: [AutomationTasksService, AutomationTaskDependenciesService],
 })
 export class AutomationTasksModule {}

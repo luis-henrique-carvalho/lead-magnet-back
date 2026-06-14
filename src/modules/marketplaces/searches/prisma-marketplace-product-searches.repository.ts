@@ -8,6 +8,7 @@ import {
   CreateMarketplaceProductSearchInput,
   MarketplaceProductSearchDetail,
   MarketplaceProductSearchesRepository,
+  PaginatedMarketplaceSearchAffiliateCaptureTasks,
   PaginatedMarketplaceSearchProducts,
   Pagination,
 } from './marketplace-product-searches.repository';
@@ -122,6 +123,76 @@ export class PrismaMarketplaceProductSearchesRepository implements MarketplacePr
           price:
             result.product.price === null ? null : Number(result.product.price),
         },
+      })),
+      ...pagination,
+      total,
+    };
+  }
+
+  async findAffiliateLinkCaptureTasks(
+    searchId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedMarketplaceSearchAffiliateCaptureTasks | null> {
+    const search = await this.prisma.marketplaceProductSearch.findUnique({
+      where: { id: searchId },
+      select: { taskId: true },
+    });
+
+    if (!search) return null;
+
+    const where = {
+      predecessorId: search.taskId,
+      successor: { type: AutomationTaskType.AffiliateLinkCapture },
+    };
+    const [total, dependencies] = await this.prisma.$transaction([
+      this.prisma.automationTaskDependency.count({ where }),
+      this.prisma.automationTaskDependency.findMany({
+        where,
+        skip: (pagination.page - 1) * pagination.limit,
+        take: pagination.limit,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        select: {
+          successor: {
+            select: {
+              id: true,
+              status: true,
+              marketplace: true,
+              createdAt: true,
+              startedAt: true,
+              finishedAt: true,
+              affiliateLinkCapture: {
+                select: {
+                  sourceProductId: true,
+                  originalProductUrl: true,
+                  capturedAffiliateUrl: true,
+                  createdAt: true,
+                  product: { select: { title: true } },
+                },
+              },
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      items: dependencies.map(({ successor }) => ({
+        taskId: successor.id,
+        status:
+          successor.status as PaginatedMarketplaceSearchAffiliateCaptureTasks['items'][number]['status'],
+        marketplace: successor.marketplace as
+          | PaginatedMarketplaceSearchAffiliateCaptureTasks['items'][number]['marketplace']
+          | null,
+        productId: successor.affiliateLinkCapture?.sourceProductId ?? null,
+        productTitle: successor.affiliateLinkCapture?.product?.title ?? null,
+        originalProductUrl:
+          successor.affiliateLinkCapture?.originalProductUrl ?? null,
+        capturedAffiliateUrl:
+          successor.affiliateLinkCapture?.capturedAffiliateUrl ?? null,
+        taskCreatedAt: successor.createdAt,
+        startedAt: successor.startedAt,
+        finishedAt: successor.finishedAt,
+        capturedAt: successor.affiliateLinkCapture?.createdAt ?? null,
       })),
       ...pagination,
       total,

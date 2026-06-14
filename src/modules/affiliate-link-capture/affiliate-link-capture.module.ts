@@ -15,10 +15,12 @@ import { MercadoLivreAffiliateLinkCaptureProvider } from './providers/mercado-li
 import { AffiliateLinkCaptureResultsRepository } from './results/affiliate-link-capture-results.repository';
 import { AffiliateLinkCaptureResultsService } from './results/affiliate-link-capture-results.service';
 import { PrismaAffiliateLinkCaptureResultsRepository } from './results/prisma-affiliate-link-capture-results.repository';
+import { MarketplacesModule } from '../marketplaces/marketplaces.module';
 
 @Module({
   imports: [
     AutomationTasksModule,
+    MarketplacesModule,
     BrowserModule,
     BullModule.registerQueue({ name: AFFILIATE_LINK_CAPTURE_QUEUE }),
   ],

@@ -31,4 +31,18 @@ export class MarketplaceProductSearchesService {
 
     return products;
   }
+
+  async findAffiliateLinkCaptureTasks(
+    searchId: string,
+    pagination: Pagination,
+  ) {
+    const tasks = await this.repository.findAffiliateLinkCaptureTasks(
+      searchId,
+      pagination,
+    );
+
+    if (!tasks) throw new NotFoundException('Marketplace search not found');
+
+    return tasks;
+  }
 }

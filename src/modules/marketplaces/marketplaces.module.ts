@@ -56,6 +56,9 @@ import { PrismaMarketplaceSearchResultsRepository } from './search-results/prism
     MarketplaceProductsController,
     MarketplaceSearchResultsController,
   ],
-  exports: [MarketplaceProductProviderRegistry],
+  exports: [
+    MarketplaceProductProviderRegistry,
+    MarketplaceProductSearchesService,
+  ],
 })
 export class MarketplacesModule {}

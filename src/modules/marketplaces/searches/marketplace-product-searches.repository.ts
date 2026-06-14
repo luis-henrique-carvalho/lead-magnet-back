@@ -1,4 +1,5 @@
 import type { AutomationTask } from '../../automation-tasks/automation-task.types';
+import { AutomationTaskStatus } from '../../../shared/enums/automation-task-status.enum';
 import { Marketplace } from '../../../shared/enums/marketplace.enum';
 
 export type CreateMarketplaceProductSearchInput = {
@@ -51,6 +52,25 @@ export type PaginatedMarketplaceSearchProducts = Pagination & {
   total: number;
 };
 
+export type MarketplaceSearchAffiliateCaptureTask = {
+  taskId: string;
+  status: AutomationTaskStatus;
+  marketplace: Marketplace | null;
+  productId: string | null;
+  productTitle: string | null;
+  originalProductUrl: string | null;
+  capturedAffiliateUrl: string | null;
+  taskCreatedAt: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  capturedAt: Date | null;
+};
+
+export type PaginatedMarketplaceSearchAffiliateCaptureTasks = Pagination & {
+  items: MarketplaceSearchAffiliateCaptureTask[];
+  total: number;
+};
+
 export abstract class MarketplaceProductSearchesRepository {
   abstract createWithTask(
     input: CreateMarketplaceProductSearchInput,
@@ -62,4 +82,8 @@ export abstract class MarketplaceProductSearchesRepository {
     searchId: string,
     pagination: Pagination,
   ): Promise<PaginatedMarketplaceSearchProducts | null>;
+  abstract findAffiliateLinkCaptureTasks(
+    searchId: string,
+    pagination: Pagination,
+  ): Promise<PaginatedMarketplaceSearchAffiliateCaptureTasks | null>;
 }

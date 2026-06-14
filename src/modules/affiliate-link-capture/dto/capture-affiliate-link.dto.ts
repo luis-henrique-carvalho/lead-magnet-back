@@ -1,9 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsUrl, IsUUID, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsUrl, IsUUID, MaxLength } from 'class-validator';
 
 import { Marketplace } from '../../../shared/enums/marketplace.enum';
 
 export class CaptureAffiliateLinkDto {
+  @ApiProperty({ format: 'uuid', required: false })
+  @IsOptional()
+  @IsUUID()
+  searchId?: string;
+
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   productId!: string;
