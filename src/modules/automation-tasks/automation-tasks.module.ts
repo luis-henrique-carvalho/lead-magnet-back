@@ -7,15 +7,21 @@ import { AutomationTaskDependenciesController } from './dependencies/automation-
 import { AutomationTaskDependenciesRepository } from './dependencies/automation-task-dependencies.repository';
 import { AutomationTaskDependenciesService } from './dependencies/automation-task-dependencies.service';
 import { PrismaAutomationTaskDependenciesRepository } from './dependencies/prisma-automation-task-dependencies.repository';
+import { AutomationTaskAttemptsController } from './attempts/automation-task-attempts.controller';
+import { AutomationTaskAttemptsRepository } from './attempts/automation-task-attempts.repository';
+import { AutomationTaskAttemptsService } from './attempts/automation-task-attempts.service';
+import { PrismaAutomationTaskAttemptsRepository } from './attempts/prisma-automation-task-attempts.repository';
 
 @Module({
   controllers: [
     AutomationTasksController,
     AutomationTaskDependenciesController,
+    AutomationTaskAttemptsController,
   ],
   providers: [
     AutomationTasksService,
     AutomationTaskDependenciesService,
+    AutomationTaskAttemptsService,
     {
       provide: AutomationTasksRepository,
       useClass: PrismaAutomationTasksRepository,
@@ -23,6 +29,10 @@ import { PrismaAutomationTaskDependenciesRepository } from './dependencies/prism
     {
       provide: AutomationTaskDependenciesRepository,
       useClass: PrismaAutomationTaskDependenciesRepository,
+    },
+    {
+      provide: AutomationTaskAttemptsRepository,
+      useClass: PrismaAutomationTaskAttemptsRepository,
     },
   ],
   exports: [AutomationTasksService],
