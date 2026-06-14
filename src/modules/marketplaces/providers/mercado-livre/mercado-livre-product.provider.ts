@@ -145,9 +145,7 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
         name: /Procurar/i,
       });
 
-      this.logger.log(
-        'Waiting for "Procurar" tab/button to become visible...',
-      );
+      this.logger.log('Waiting for "Procurar" tab/button to become visible...');
       await Promise.race([
         searchTab
           .waitFor({ state: 'visible', timeout: 3000 })

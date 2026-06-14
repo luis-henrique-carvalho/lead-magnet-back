@@ -4,6 +4,7 @@ import { PrismaService } from '../../infra/database/prisma/prisma.service';
 import {
   AutomationTask,
   CreateAutomationTaskInput,
+  StartAutomationTaskAttemptInput,
   UpdateAutomationTaskInput,
 } from './automation-task.types';
 import { AutomationTasksRepository } from './automation-tasks.repository';
@@ -21,28 +22,97 @@ export class PrismaAutomationTasksRepository implements AutomationTasksRepositor
   async findById(id: string): Promise<AutomationTask | null> {
     return this.prisma.automationTask.findUnique({
       where: { id },
+      include: {
+        attemptsHistory: { orderBy: { number: 'asc' } },
+        marketplaceSearch: {
+          include: {
+            results: {
+              orderBy: { discoveredAt: 'asc' },
+              include: { product: true },
+            },
+          },
+        },
+        affiliateLinkCapture: true,
+        successorLinks: {
+          include: {
+            predecessor: { select: { id: true, status: true, type: true } },
+          },
+        },
+      },
     }) as Promise<AutomationTask | null>;
   }
 
-  async update(
+  async startAttempt(
     id: string,
-    input: UpdateAutomationTaskInput,
+    input: StartAutomationTaskAttemptInput,
   ): Promise<AutomationTask | null> {
-    const { incrementAttempts, ...data } = input;
-    const updateData: Prisma.AutomationTaskUpdateManyMutationInput = {
-      ...data,
-      result: this.toJsonInput(data.result),
-      attempts: incrementAttempts ? { increment: 1 } : undefined,
-    };
-
-    const result = await this.prisma.automationTask.updateMany({
+    const startedAt = new Date();
+    const exists = await this.prisma.automationTask.findUnique({
       where: { id },
-      data: updateData,
+      select: { id: true },
     });
 
-    if (result.count === 0) {
-      return null;
-    }
+    if (!exists) return null;
+
+    await this.prisma.$transaction(async (transaction) => {
+      const task = await transaction.automationTask.update({
+        where: { id },
+        data: {
+          status: 'processing',
+          startedAt,
+          finishedAt: null,
+          error: null,
+          errorType: null,
+          attempts: { increment: 1 },
+        },
+        select: { attempts: true },
+      });
+
+      await transaction.automationTaskAttempt.create({
+        data: {
+          taskId: id,
+          number: task.attempts,
+          jobId: input.jobId,
+          metadata: this.toJsonInput(input.metadata),
+          startedAt,
+        },
+      });
+    });
+
+    return this.findById(id);
+  }
+
+  async finishAttempt(
+    id: string,
+    jobId: string,
+    input: UpdateAutomationTaskInput,
+  ): Promise<AutomationTask | null> {
+    const attempt = await this.prisma.automationTaskAttempt.findFirst({
+      where: { taskId: id, jobId, finishedAt: null },
+      orderBy: { number: 'desc' },
+      select: { id: true },
+    });
+
+    if (!attempt) return null;
+
+    await this.prisma.$transaction([
+      this.prisma.automationTask.update({
+        where: { id },
+        data: {
+          ...input,
+          result: this.toJsonInput(input.result),
+        },
+      }),
+      this.prisma.automationTaskAttempt.update({
+        where: { id: attempt.id },
+        data: {
+          status: input.status,
+          error: input.error,
+          errorType: input.errorType,
+          finishedAt: input.finishedAt,
+        },
+      }),
+    ]);
 
     return this.findById(id);
   }

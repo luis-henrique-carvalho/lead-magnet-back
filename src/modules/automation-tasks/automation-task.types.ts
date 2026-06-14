@@ -15,6 +15,52 @@ export type AutomationTask = {
   finishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  attemptsHistory?: AutomationTaskAttempt[];
+  marketplaceSearch?: MarketplaceProductSearchResult | null;
+  affiliateLinkCapture?: AffiliateLinkCaptureResult | null;
+  successorLinks?: AutomationTaskDependency[];
+};
+
+export type AutomationTaskAttempt = {
+  id: string;
+  taskId: string;
+  number: number;
+  jobId: string;
+  status: AutomationTaskStatus;
+  error: string | null;
+  errorType: AutomationErrorType | null;
+  metadata: unknown;
+  startedAt: Date;
+  finishedAt: Date | null;
+};
+
+export type MarketplaceProductSearchResult = {
+  id: string;
+  marketplace: string;
+  query: string | null;
+  category: string | null;
+  requestedLimit: number;
+  foundCount: number;
+  savedCount: number;
+  completedAt: Date | null;
+  results: Array<{
+    discoveredAt: Date;
+    product: unknown;
+  }>;
+};
+
+export type AffiliateLinkCaptureResult = {
+  sourceProductId: string;
+  marketplace: string;
+  originalProductUrl: string;
+  capturedAffiliateUrl: string;
+  createdAt: Date;
+};
+
+export type AutomationTaskDependency = {
+  predecessorId: string;
+  required: boolean;
+  predecessor: Pick<AutomationTask, 'id' | 'status' | 'type'>;
 };
 
 export type CreateAutomationTaskInput = {
@@ -29,5 +75,9 @@ export type UpdateAutomationTaskInput = {
   errorType?: AutomationErrorType | null;
   startedAt?: Date | null;
   finishedAt?: Date | null;
-  incrementAttempts?: boolean;
+};
+
+export type StartAutomationTaskAttemptInput = {
+  jobId: string;
+  metadata?: unknown;
 };

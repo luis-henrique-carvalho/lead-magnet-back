@@ -10,6 +10,7 @@ import { AffiliateLinkCaptureProviderRegistry } from '../providers/affiliate-lin
 import { AffiliateLinkCaptureProvider } from '../providers/affiliate-link-capture-provider.interface';
 import { AffiliateLinkCaptureJobData } from './affiliate-link-capture.job';
 import { AffiliateLinkCaptureProcessor } from './affiliate-link-capture.processor';
+import { AffiliateLinkCaptureResultsService } from '../results/affiliate-link-capture-results.service';
 
 describe('AffiliateLinkCaptureProcessor', () => {
   let processor: AffiliateLinkCaptureProcessor;
@@ -28,6 +29,9 @@ describe('AffiliateLinkCaptureProcessor', () => {
   let markFailed: jest.MockedFunction<AutomationTasksService['markFailed']>;
   let markManualRequired: jest.MockedFunction<
     AutomationTasksService['markManualRequired']
+  >;
+  let saveResult: jest.MockedFunction<
+    AffiliateLinkCaptureResultsService['save']
   >;
 
   const jobData: AffiliateLinkCaptureJobData = {
@@ -53,6 +57,7 @@ describe('AffiliateLinkCaptureProcessor', () => {
     markCompleted = jest.fn();
     markFailed = jest.fn();
     markManualRequired = jest.fn();
+    saveResult = jest.fn();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -69,6 +74,10 @@ describe('AffiliateLinkCaptureProcessor', () => {
             markFailed,
             markManualRequired,
           },
+        },
+        {
+          provide: AffiliateLinkCaptureResultsService,
+          useValue: { save: saveResult },
         },
       ],
     }).compile();
@@ -91,14 +100,21 @@ describe('AffiliateLinkCaptureProcessor', () => {
       originalProductUrl: jobData.originalProductUrl,
       capturedAffiliateUrl: 'https://affiliate.example/link',
     });
-    expect(markProcessing).toHaveBeenCalledWith('task-id');
+    expect(markProcessing).toHaveBeenCalledWith('task-id', 'task-id');
     expect(getProvider).toHaveBeenCalledWith(Marketplace.Amazon);
     expect(captureAffiliateLink).toHaveBeenCalledWith({
       productId: jobData.productId,
       marketplace: Marketplace.Amazon,
       originalProductUrl: jobData.originalProductUrl,
     });
-    expect(markCompleted).toHaveBeenCalledWith('task-id', {
+    expect(saveResult).toHaveBeenCalledWith({
+      taskId: 'task-id',
+      productId: jobData.productId,
+      marketplace: Marketplace.Amazon,
+      originalProductUrl: jobData.originalProductUrl,
+      capturedAffiliateUrl: 'https://affiliate.example/link',
+    });
+    expect(markCompleted).toHaveBeenCalledWith('task-id', 'task-id', {
       productId: jobData.productId,
       marketplace: Marketplace.Amazon,
       originalProductUrl: jobData.originalProductUrl,
@@ -117,6 +133,7 @@ describe('AffiliateLinkCaptureProcessor', () => {
     await expect(processor.process(createJob())).resolves.toBeUndefined();
     expect(markManualRequired).toHaveBeenCalledWith(
       'task-id',
+      'task-id',
       'Authenticated session expired',
       AutomationErrorType.SessionInvalid,
     );
@@ -129,6 +146,7 @@ describe('AffiliateLinkCaptureProcessor', () => {
 
     await expect(processor.process(createJob())).rejects.toBe(error);
     expect(markFailed).toHaveBeenCalledWith(
+      'task-id',
       'task-id',
       'Unexpected provider failure',
       AutomationErrorType.InternalError,

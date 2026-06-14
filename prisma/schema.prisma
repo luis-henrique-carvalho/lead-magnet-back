@@ -107,40 +107,99 @@ enum AutomationErrorType {
 }
 
 model AutomationTask {
-  id          String               @id @default(uuid())
-  type        AutomationTaskType
-  marketplace String?
-  status      AutomationTaskStatus @default(pending)
-  result      Json?
-  error       String?
-  errorType   AutomationErrorType?
-  attempts    Int                  @default(0)
-  startedAt   DateTime?
-  finishedAt  DateTime?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id                   String                      @id @default(uuid())
+  type                 AutomationTaskType
+  marketplace          String?
+  status               AutomationTaskStatus        @default(pending)
+  result               Json?
+  error                String?
+  errorType            AutomationErrorType?
+  attempts             Int                         @default(0)
+  startedAt            DateTime?
+  finishedAt           DateTime?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  attemptsHistory      AutomationTaskAttempt[]
+  marketplaceSearch    MarketplaceProductSearch?
+  affiliateLinkCapture AffiliateLinkCaptureResult?
+  predecessorLinks     AutomationTaskDependency[]  @relation("DependencyPredecessor")
+  successorLinks       AutomationTaskDependency[]  @relation("DependencySuccessor")
 
   @@index([status])
   @@index([type])
   @@map("automation_task")
 }
 
+model AutomationTaskAttempt {
+  id         String               @id @default(uuid())
+  taskId     String
+  number     Int
+  jobId      String
+  status     AutomationTaskStatus @default(processing)
+  error      String?
+  errorType  AutomationErrorType?
+  metadata   Json?
+  startedAt  DateTime             @default(now())
+  finishedAt DateTime?
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+  task       AutomationTask       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, number])
+  @@index([taskId, startedAt])
+  @@index([jobId])
+  @@map("automation_task_attempt")
+}
+
+model AutomationTaskDependency {
+  id            String         @id @default(uuid())
+  predecessorId String
+  successorId   String
+  required      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  predecessor   AutomationTask @relation("DependencyPredecessor", fields: [predecessorId], references: [id], onDelete: Restrict)
+  successor     AutomationTask @relation("DependencySuccessor", fields: [successorId], references: [id], onDelete: Restrict)
+
+  @@unique([predecessorId, successorId])
+  @@index([successorId])
+  @@map("automation_task_dependency")
+}
+
+model MarketplaceProductSearch {
+  id             String                           @id @default(uuid())
+  taskId         String                           @unique
+  marketplace    String
+  query          String?
+  category       String?
+  requestedLimit Int
+  foundCount     Int                              @default(0)
+  savedCount     Int                              @default(0)
+  createdAt      DateTime                         @default(now())
+  completedAt    DateTime?
+  task           AutomationTask                   @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  results        MarketplaceProductSearchResult[]
+
+  @@index([marketplace, createdAt])
+  @@map("marketplace_product_search")
+}
+
 model MarketplaceProduct {
-  id            String                           @id @default(uuid())
-  externalId    String?
-  marketplace   String
-  title         String
-  originalUrl   String
-  imageUrl      String?
-  price         Decimal?                         @db.Decimal(12, 2)
-  rating        Float?
-  reviewsCount  Int?
-  salesCount    Int?
-  category      String?
-  rawData       Json?
-  createdAt     DateTime                         @default(now())
-  updatedAt     DateTime                         @updatedAt
-  searchResults MarketplaceProductSearchResult[]
+  id                    String                           @id @default(uuid())
+  externalId            String?
+  marketplace           String
+  title                 String
+  originalUrl           String
+  imageUrl              String?
+  price                 Decimal?                         @db.Decimal(12, 2)
+  rating                Float?
+  reviewsCount          Int?
+  salesCount            Int?
+  category              String?
+  rawData               Json?
+  createdAt             DateTime                         @default(now())
+  updatedAt             DateTime                         @updatedAt
+  searchResults         MarketplaceProductSearchResult[]
+  affiliateLinkCaptures AffiliateLinkCaptureResult[]
 
   @@unique([marketplace, originalUrl])
   @@index([externalId])
@@ -148,14 +207,32 @@ model MarketplaceProduct {
 }
 
 model MarketplaceProductSearchResult {
-  id           String             @id @default(uuid())
-  searchId     String
-  productId    String
-  discoveredAt DateTime           @default(now())
-  product      MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id             String                    @id @default(uuid())
+  searchId       String?
+  legacySearchId String?
+  productId      String
+  discoveredAt   DateTime                  @default(now())
+  product        MarketplaceProduct        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  search         MarketplaceProductSearch? @relation(fields: [searchId], references: [id], onDelete: Cascade)
 
   @@unique([searchId, productId])
   @@index([searchId])
   @@index([productId])
   @@map("marketplace_product_search_result")
+}
+
+model AffiliateLinkCaptureResult {
+  id                   String              @id @default(uuid())
+  taskId               String              @unique
+  sourceProductId      String
+  productId            String?
+  marketplace          String
+  originalProductUrl   String
+  capturedAffiliateUrl String
+  createdAt            DateTime            @default(now())
+  task                 AutomationTask      @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  product              MarketplaceProduct? @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId])
+  @@map("affiliate_link_capture_result")
 }

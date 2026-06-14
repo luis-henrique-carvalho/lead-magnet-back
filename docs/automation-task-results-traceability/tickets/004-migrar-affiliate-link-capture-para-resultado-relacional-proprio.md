@@ -1,10 +1,10 @@
 ---
-title: "Migrar affiliate-link-capture para resultado relacional proprio"
-status: "needs-triage"
-type: "AFK"
-parent: "docs/automation-task-results-traceability/prd.md"
+title: 'Migrar affiliate-link-capture para resultado relacional proprio'
+status: 'done'
+type: 'AFK'
+parent: 'docs/automation-task-results-traceability/prd.md'
 blocked_by:
-  - "docs/tickets/001-persistir-buscas-de-marketplace-como-entidade-relacional.md"
+  - 'docs/tickets/001-persistir-buscas-de-marketplace-como-entidade-relacional.md'
 user_stories: [21, 23, 24, 36, 37, 40]
 ---
 
@@ -18,11 +18,18 @@ Substituir o uso de JSON generico como fonte de verdade do resultado de `affilia
 
 ## Acceptance criteria
 
-- [ ] O resultado da captura de link fica persistido em tabela propria ligada a task.
-- [ ] A consulta publica de task continua retornando um resumo coerente do resultado.
-- [ ] O fluxo de escrita salva o resultado relacional antes de concluir a task.
-- [ ] O padrao fica reutilizavel para outros tipos de automacao com resultado proprio.
+- [x] O resultado da captura de link fica persistido em tabela propria ligada a task.
+- [x] A consulta publica de task continua retornando um resumo coerente do resultado.
+- [x] O fluxo de escrita salva o resultado relacional antes de concluir a task.
+- [x] O padrao fica reutilizavel para outros tipos de automacao com resultado proprio.
+- [x] A secao `Result` documenta o comportamento entregue, Diagrama Mermaid caso aplicavel, os principais arquivos ou contratos, Responsabilidade de cada arquivo, explicações sobre conceitos (caso aplicavel e necessario), decisoes e limites relevantes e as validacoes executadas.
 
 ## Blocked by
 
 - `docs/tickets/001-persistir-buscas-de-marketplace-como-entidade-relacional.md`
+
+## Result
+
+`AffiliateLinkCaptureResult` e a fonte relacional do resultado da captura. O processor persiste por um repository dedicado antes de marcar a task como concluida, e a consulta publica projeta o mesmo formato anterior a partir da relacao.
+
+Quando o produto canonico existe, a captura tambem recebe a foreign key; o identificador de entrada continua preservado em `sourceProductId` para compatibilidade e auditoria.

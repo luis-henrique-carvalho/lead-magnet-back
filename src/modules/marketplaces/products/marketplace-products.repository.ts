@@ -18,5 +18,6 @@ export abstract class MarketplaceProductsRepository {
   abstract saveSearchResults(
     searchId: string,
     products: PersistMarketplaceProductInput[],
+    foundCount: number,
   ): Promise<number>;
 }

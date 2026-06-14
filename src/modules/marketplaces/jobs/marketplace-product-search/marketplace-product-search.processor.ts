@@ -33,8 +33,9 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
     job: Job<MarketplaceProductSearchJobData>,
   ): Promise<MarketplaceProductSearchJobResult | void> {
     const { taskId, searchId, marketplace, query, category, limit } = job.data;
+    const jobId = String(job.id ?? taskId);
 
-    await this.automationTasksService.markProcessing(taskId);
+    await this.automationTasksService.markProcessing(taskId, jobId);
 
     try {
       const provider = this.providerRegistry.getProvider(marketplace);
@@ -48,6 +49,7 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
         await this.marketplaceProductsService.saveSearchResults(
           searchId,
           products,
+          products.length,
         );
       const result: MarketplaceProductSearchJobResult = {
         searchId,
@@ -56,7 +58,7 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
         savedCount,
       };
 
-      await this.automationTasksService.markCompleted(taskId, result);
+      await this.automationTasksService.markCompleted(taskId, jobId, result);
 
       return result;
     } catch (error) {
@@ -68,6 +70,7 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
         );
         await this.automationTasksService.markManualRequired(
           taskId,
+          jobId,
           mappedError.message,
           mappedError.errorType,
         );
@@ -79,6 +82,7 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
       );
       await this.automationTasksService.markFailed(
         taskId,
+        jobId,
         mappedError.message,
         mappedError.errorType,
       );

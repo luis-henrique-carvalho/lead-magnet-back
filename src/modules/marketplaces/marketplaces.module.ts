@@ -12,6 +12,9 @@ import { MarketplaceProductSearchProcessor } from './jobs/marketplace-product-se
 import { MarketplaceProductsRepository } from './products/marketplace-products.repository';
 import { MarketplaceProductsService } from './products/marketplace-products.service';
 import { PrismaMarketplaceProductsRepository } from './products/prisma-marketplace-products.repository';
+import { MarketplaceProductSearchesRepository } from './searches/marketplace-product-searches.repository';
+import { MarketplaceProductSearchesService } from './searches/marketplace-product-searches.service';
+import { PrismaMarketplaceProductSearchesRepository } from './searches/prisma-marketplace-product-searches.repository';
 
 @Module({
   imports: [
@@ -25,9 +28,14 @@ import { PrismaMarketplaceProductsRepository } from './products/prisma-marketpla
     AmazonProductProvider,
     MarketplaceProductProviderRegistry,
     MarketplaceProductsService,
+    MarketplaceProductSearchesService,
     {
       provide: MarketplaceProductsRepository,
       useClass: PrismaMarketplaceProductsRepository,
+    },
+    {
+      provide: MarketplaceProductSearchesRepository,
+      useClass: PrismaMarketplaceProductSearchesRepository,
     },
     MarketplaceProductSearchProcessor,
   ],

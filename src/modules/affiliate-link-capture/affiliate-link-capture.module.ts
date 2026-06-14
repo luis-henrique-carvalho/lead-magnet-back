@@ -12,6 +12,9 @@ import { AffiliateLinkCaptureProviderRegistry } from './providers/affiliate-link
 import { AFFILIATE_LINK_CAPTURE_PROVIDERS } from './providers/affiliate-link-capture-provider.interface';
 import { FakeAffiliateLinkCaptureProvider } from './providers/fake-affiliate-link-capture.provider';
 import { MercadoLivreAffiliateLinkCaptureProvider } from './providers/mercado-livre-affiliate-link-capture.provider';
+import { AffiliateLinkCaptureResultsRepository } from './results/affiliate-link-capture-results.repository';
+import { AffiliateLinkCaptureResultsService } from './results/affiliate-link-capture-results.service';
+import { PrismaAffiliateLinkCaptureResultsRepository } from './results/prisma-affiliate-link-capture-results.repository';
 
 @Module({
   imports: [
@@ -39,6 +42,11 @@ import { MercadoLivreAffiliateLinkCaptureProvider } from './providers/mercado-li
       ],
     },
     AffiliateLinkCaptureProviderRegistry,
+    AffiliateLinkCaptureResultsService,
+    {
+      provide: AffiliateLinkCaptureResultsRepository,
+      useClass: PrismaAffiliateLinkCaptureResultsRepository,
+    },
     AffiliateLinkCaptureProcessor,
   ],
   exports: [AffiliateLinkCaptureProviderRegistry],

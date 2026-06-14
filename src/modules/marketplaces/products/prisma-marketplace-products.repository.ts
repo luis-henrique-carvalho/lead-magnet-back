@@ -14,6 +14,7 @@ export class PrismaMarketplaceProductsRepository implements MarketplaceProductsR
   saveSearchResults(
     searchId: string,
     products: PersistMarketplaceProductInput[],
+    foundCount: number,
   ): Promise<number> {
     return this.prisma.$transaction(async (transaction) => {
       const productIds: string[] = [];
@@ -34,15 +35,21 @@ export class PrismaMarketplaceProductsRepository implements MarketplaceProductsR
         productIds.push(persistedProduct.id);
       }
 
-      if (productIds.length === 0) {
-        return 0;
-      }
+      const result = productIds.length
+        ? await transaction.marketplaceProductSearchResult.createMany({
+            data: productIds.map((productId) => ({ searchId, productId })),
+            skipDuplicates: true,
+          })
+        : { count: 0 };
 
-      const result =
-        await transaction.marketplaceProductSearchResult.createMany({
-          data: productIds.map((productId) => ({ searchId, productId })),
-          skipDuplicates: true,
-        });
+      await transaction.marketplaceProductSearch.update({
+        where: { id: searchId },
+        data: {
+          foundCount,
+          savedCount: { increment: result.count },
+          completedAt: new Date(),
+        },
+      });
 
       return result.count;
     });

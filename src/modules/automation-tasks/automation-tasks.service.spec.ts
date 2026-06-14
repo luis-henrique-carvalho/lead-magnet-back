@@ -12,7 +12,12 @@ describe('AutomationTasksService', () => {
   let service: AutomationTasksService;
   let createTask: jest.MockedFunction<AutomationTasksRepository['create']>;
   let findTaskById: jest.MockedFunction<AutomationTasksRepository['findById']>;
-  let updateTask: jest.MockedFunction<AutomationTasksRepository['update']>;
+  let startAttempt: jest.MockedFunction<
+    AutomationTasksRepository['startAttempt']
+  >;
+  let finishAttempt: jest.MockedFunction<
+    AutomationTasksRepository['finishAttempt']
+  >;
 
   const task = (overrides: Partial<AutomationTask> = {}): AutomationTask => ({
     id: 'task-id',
@@ -39,14 +44,19 @@ describe('AutomationTasksService', () => {
       ReturnType<AutomationTasksRepository['findById']>,
       Parameters<AutomationTasksRepository['findById']>
     >();
-    updateTask = jest.fn<
-      ReturnType<AutomationTasksRepository['update']>,
-      Parameters<AutomationTasksRepository['update']>
+    startAttempt = jest.fn<
+      ReturnType<AutomationTasksRepository['startAttempt']>,
+      Parameters<AutomationTasksRepository['startAttempt']>
+    >();
+    finishAttempt = jest.fn<
+      ReturnType<AutomationTasksRepository['finishAttempt']>,
+      Parameters<AutomationTasksRepository['finishAttempt']>
     >();
     repository = {
       create: createTask,
       findById: findTaskById,
-      update: updateTask,
+      startAttempt,
+      finishAttempt,
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -89,21 +99,56 @@ describe('AutomationTasksService', () => {
     );
   });
 
+  it('projects a relational marketplace search as the public result', async () => {
+    findTaskById.mockResolvedValue(
+      task({
+        result: { legacy: true },
+        marketplaceSearch: {
+          id: 'search-id',
+          marketplace: 'amazon',
+          query: 'leitor',
+          category: null,
+          requestedLimit: 2,
+          foundCount: 1,
+          savedCount: 1,
+          completedAt: new Date('2026-06-12T00:01:00.000Z'),
+          results: [
+            {
+              discoveredAt: new Date('2026-06-12T00:00:30.000Z'),
+              product: { id: 'product-id', title: 'Leitor digital' },
+            },
+          ],
+        },
+      }),
+    );
+
+    const response = await service.findById('task-id');
+
+    expect(response.result).toEqual(
+      expect.objectContaining({
+        searchId: 'search-id',
+        requestedCount: 2,
+        products: [
+          expect.objectContaining({
+            id: 'product-id',
+            title: 'Leitor digital',
+          }),
+        ],
+      }),
+    );
+  });
+
   it('marks a task as processing and increments attempts', async () => {
-    updateTask.mockResolvedValue(
+    startAttempt.mockResolvedValue(
       task({ status: AutomationTaskStatus.Processing, attempts: 1 }),
     );
 
-    const result = await service.markProcessing('task-id');
+    const result = await service.markProcessing('task-id', 'job-id');
 
-    expect(updateTask).toHaveBeenCalledWith(
-      'task-id',
-      expect.objectContaining({
-        status: AutomationTaskStatus.Processing,
-        incrementAttempts: true,
-      }),
-    );
-    expect(updateTask.mock.calls[0][1].startedAt).toBeInstanceOf(Date);
+    expect(startAttempt).toHaveBeenCalledWith('task-id', {
+      jobId: 'job-id',
+      metadata: undefined,
+    });
     expect(result.status).toBe(AutomationTaskStatus.Processing);
   });
 
@@ -117,13 +162,18 @@ describe('AutomationTasksService', () => {
     {
       method: 'markCompleted' as const,
       call: (instance: AutomationTasksService) =>
-        instance.markCompleted('task-id', { products: 2 }),
+        instance.markCompleted('task-id', 'job-id', { products: 2 }),
       status: AutomationTaskStatus.Completed,
     },
     {
       method: 'markPartial' as const,
       call: (instance: AutomationTasksService) =>
-        instance.markPartial('task-id', { products: 1 }, 'One item failed'),
+        instance.markPartial(
+          'task-id',
+          'job-id',
+          { products: 1 },
+          'One item failed',
+        ),
       status: AutomationTaskStatus.Partial,
     },
     {
@@ -131,6 +181,7 @@ describe('AutomationTasksService', () => {
       call: (instance: AutomationTasksService) =>
         instance.markFailed(
           'task-id',
+          'job-id',
           'Provider unavailable',
           AutomationErrorType.UpstreamError,
         ),
@@ -139,32 +190,34 @@ describe('AutomationTasksService', () => {
     {
       method: 'markManualRequired' as const,
       call: (instance: AutomationTasksService) =>
-        instance.markManualRequired('task-id', 'CAPTCHA required'),
+        instance.markManualRequired('task-id', 'job-id', 'CAPTCHA required'),
       status: AutomationTaskStatus.ManualRequired,
     },
   ])('supports the $method transition', async ({ call, status }) => {
-    updateTask.mockResolvedValue(task({ status }));
+    finishAttempt.mockResolvedValue(task({ status }));
 
     await call(service);
 
-    expect(updateTask).toHaveBeenCalledWith(
+    expect(finishAttempt).toHaveBeenCalledWith(
       'task-id',
+      'job-id',
       expect.objectContaining({
         status,
       }),
     );
-    expect(updateTask.mock.calls[0][1].finishedAt).toBeInstanceOf(Date);
+    expect(finishAttempt.mock.calls[0][2].finishedAt).toBeInstanceOf(Date);
   });
 
   it('uses manual_required as the default manual error type', async () => {
-    updateTask.mockResolvedValue(
+    finishAttempt.mockResolvedValue(
       task({ status: AutomationTaskStatus.ManualRequired }),
     );
 
-    await service.markManualRequired('task-id', 'CAPTCHA required');
+    await service.markManualRequired('task-id', 'job-id', 'CAPTCHA required');
 
-    expect(updateTask).toHaveBeenCalledWith(
+    expect(finishAttempt).toHaveBeenCalledWith(
       'task-id',
+      'job-id',
       expect.objectContaining({
         errorType: AutomationErrorType.ManualRequired,
       }),

@@ -10,7 +10,8 @@ export class MarketplaceProductsService {
   saveSearchResults(
     searchId: string,
     products: MarketplaceProduct[],
+    foundCount: number = products.length,
   ): Promise<number> {
-    return this.repository.saveSearchResults(searchId, products);
+    return this.repository.saveSearchResults(searchId, products, foundCount);
   }
 }
