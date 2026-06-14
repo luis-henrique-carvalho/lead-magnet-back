@@ -12,9 +12,11 @@ import { PrismaMarketplaceProductsRepository } from './prisma-marketplace-produc
 describe('PrismaMarketplaceProductsRepository', () => {
   const upsert = jest.fn();
   const createMany = jest.fn();
+  const updateSearch = jest.fn();
   const transactionClient = {
     marketplaceProduct: { upsert },
     marketplaceProductSearchResult: { createMany },
+    marketplaceProductSearch: { update: updateSearch },
   };
   const transaction = jest.fn(
     (callback: (client: typeof transactionClient) => Promise<number>) =>
@@ -43,7 +45,7 @@ describe('PrismaMarketplaceProductsRepository', () => {
     createMany.mockResolvedValue({ count: 1 });
 
     await expect(
-      repository.saveSearchResults('search-id', products),
+      repository.saveSearchResults('search-id', products, 1),
     ).resolves.toBe(1);
 
     expect(transaction).toHaveBeenCalledTimes(1);
@@ -61,13 +63,16 @@ describe('PrismaMarketplaceProductsRepository', () => {
       data: [{ searchId: 'search-id', productId: 'product-id' }],
       skipDuplicates: true,
     });
+    expect(updateSearch).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'search-id' } }),
+    );
   });
 
   it('returns zero saved products when reprocessing the same search', async () => {
     createMany.mockResolvedValue({ count: 0 });
 
     await expect(
-      repository.saveSearchResults('search-id', products),
+      repository.saveSearchResults('search-id', products, 1),
     ).resolves.toBe(0);
   });
 });

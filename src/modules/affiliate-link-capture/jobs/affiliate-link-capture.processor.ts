@@ -6,6 +6,7 @@ import { AutomationErrorType } from '../../../shared/enums/automation-error-type
 import { AutomationTasksService } from '../../automation-tasks/automation-tasks.service';
 import { AffiliateLinkCaptureManualRequiredError } from '../errors/affiliate-link-capture-manual-required.error';
 import { AffiliateLinkCaptureProviderRegistry } from '../providers/affiliate-link-capture-provider.registry';
+import { AffiliateLinkCaptureResultsService } from '../results/affiliate-link-capture-results.service';
 import {
   AFFILIATE_LINK_CAPTURE_QUEUE,
   AffiliateLinkCaptureJobData,
@@ -19,6 +20,7 @@ export class AffiliateLinkCaptureProcessor extends WorkerHost {
   constructor(
     private readonly providerRegistry: AffiliateLinkCaptureProviderRegistry,
     private readonly automationTasksService: AutomationTasksService,
+    private readonly resultsService: AffiliateLinkCaptureResultsService,
   ) {
     super();
   }
@@ -27,8 +29,9 @@ export class AffiliateLinkCaptureProcessor extends WorkerHost {
     job: Job<AffiliateLinkCaptureJobData>,
   ): Promise<AffiliateLinkCaptureJobResult | void> {
     const { taskId, productId, marketplace, originalProductUrl } = job.data;
+    const jobId = String(job.id ?? taskId);
 
-    await this.automationTasksService.markProcessing(taskId);
+    await this.automationTasksService.markProcessing(taskId, jobId);
 
     try {
       const provider = this.providerRegistry.getProvider(marketplace);
@@ -44,7 +47,8 @@ export class AffiliateLinkCaptureProcessor extends WorkerHost {
         capturedAffiliateUrl: capturedLink.capturedAffiliateUrl,
       };
 
-      await this.automationTasksService.markCompleted(taskId, result);
+      await this.resultsService.save({ taskId, ...result });
+      await this.automationTasksService.markCompleted(taskId, jobId, result);
 
       return result;
     } catch (error) {
@@ -54,6 +58,7 @@ export class AffiliateLinkCaptureProcessor extends WorkerHost {
         );
         await this.automationTasksService.markManualRequired(
           taskId,
+          jobId,
           error.message,
           error.errorType,
         );
@@ -66,6 +71,7 @@ export class AffiliateLinkCaptureProcessor extends WorkerHost {
       );
       await this.automationTasksService.markFailed(
         taskId,
+        jobId,
         message,
         AutomationErrorType.InternalError,
       );

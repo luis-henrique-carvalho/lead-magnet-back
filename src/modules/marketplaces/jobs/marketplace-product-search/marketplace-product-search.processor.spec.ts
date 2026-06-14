@@ -116,7 +116,7 @@ describe('MarketplaceProductSearchProcessor', () => {
       foundCount: 2,
       savedCount: 2,
     });
-    expect(markProcessing).toHaveBeenCalledWith('task-id');
+    expect(markProcessing).toHaveBeenCalledWith('task-id', 'task-id');
     expect(getProvider).toHaveBeenCalledWith(Marketplace.Amazon);
     expect(searchProducts).toHaveBeenCalledWith({
       marketplace: Marketplace.Amazon,
@@ -124,8 +124,12 @@ describe('MarketplaceProductSearchProcessor', () => {
       category: 'eletronicos',
       limit: 3,
     });
-    expect(saveSearchResults).toHaveBeenCalledWith('search-id', products);
-    expect(markCompleted).toHaveBeenCalledWith('task-id', {
+    expect(saveSearchResults).toHaveBeenCalledWith(
+      'search-id',
+      products,
+      products.length,
+    );
+    expect(markCompleted).toHaveBeenCalledWith('task-id', 'task-id', {
       searchId: 'search-id',
       requestedCount: 3,
       foundCount: 2,
@@ -141,6 +145,7 @@ describe('MarketplaceProductSearchProcessor', () => {
 
     await expect(processor.process(createJob())).resolves.toBeUndefined();
     expect(markManualRequired).toHaveBeenCalledWith(
+      'task-id',
       'task-id',
       'CAPTCHA_REQUIRED',
       AutomationErrorType.CaptchaRequired,
@@ -158,6 +163,7 @@ describe('MarketplaceProductSearchProcessor', () => {
     await expect(processor.process(createJob())).rejects.toBe(error);
     expect(markFailed).toHaveBeenCalledWith(
       'task-id',
+      'task-id',
       'Provider request failed',
       AutomationErrorType.Timeout,
     );
@@ -169,6 +175,7 @@ describe('MarketplaceProductSearchProcessor', () => {
 
     await expect(processor.process(createJob())).rejects.toBe(error);
     expect(markFailed).toHaveBeenCalledWith(
+      'task-id',
       'task-id',
       'Unexpected provider failure',
       AutomationErrorType.InternalError,

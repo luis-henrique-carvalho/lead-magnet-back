@@ -1,10 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import { Queue } from 'bullmq';
 
-import { AutomationTasksService } from '../automation-tasks/automation-tasks.service';
-import { AutomationTaskType } from '../../shared/enums/automation-task-type.enum';
 import { SearchMarketplaceProductsDto } from './dto/search-marketplace-products.dto';
 import { SearchMarketplaceProductsResponseDto } from './dto/search-marketplace-products-response.dto';
 import {
@@ -12,28 +9,24 @@ import {
   MarketplaceProductSearchJobData,
   SEARCH_PRODUCTS_JOB,
 } from './jobs/marketplace-product-search/marketplace-product-search.job';
+import { MarketplaceProductSearchesService } from './searches/marketplace-product-searches.service';
 
 @Injectable()
 export class MarketplacesService {
   constructor(
     @InjectQueue(MARKETPLACE_PRODUCT_SEARCH_QUEUE)
     private readonly marketplaceSearchQueue: Queue<MarketplaceProductSearchJobData>,
-    private readonly automationTasksService: AutomationTasksService,
+    private readonly searchesService: MarketplaceProductSearchesService,
   ) {}
 
   async searchProducts(
     input: SearchMarketplaceProductsDto,
   ): Promise<SearchMarketplaceProductsResponseDto> {
-    const task = await this.automationTasksService.create({
-      type: AutomationTaskType.MarketplaceProductSearch,
-      marketplace: input.marketplace,
-    });
-
-    const searchId = randomUUID();
+    const search = await this.searchesService.create(input);
 
     await this.marketplaceSearchQueue.add(SEARCH_PRODUCTS_JOB, {
-      taskId: task.id,
-      searchId,
+      taskId: search.task.id,
+      searchId: search.id,
       marketplace: input.marketplace,
       query: input.query,
       category: input.category,
@@ -41,9 +34,9 @@ export class MarketplacesService {
     });
 
     return {
-      taskId: task.id,
-      statusUrl: `/automation-tasks/${task.id}`,
-      searchId,
+      taskId: search.task.id,
+      statusUrl: `/automation-tasks/${search.task.id}`,
+      searchId: search.id,
     };
   }
 }

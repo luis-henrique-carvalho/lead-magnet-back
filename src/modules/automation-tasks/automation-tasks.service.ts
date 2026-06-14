@@ -23,22 +23,29 @@ export class AutomationTasksService {
     return AutomationTaskResponseDto.fromTask(task);
   }
 
-  async markProcessing(taskId: string): Promise<AutomationTask> {
-    return this.updateTask(taskId, {
-      status: AutomationTaskStatus.Processing,
-      startedAt: new Date(),
-      finishedAt: null,
-      error: null,
-      errorType: null,
-      incrementAttempts: true,
+  async markProcessing(
+    taskId: string,
+    jobId: string,
+    metadata?: unknown,
+  ): Promise<AutomationTask> {
+    const task = await this.repository.startAttempt(taskId, {
+      jobId,
+      metadata,
     });
+
+    if (!task) {
+      throw new NotFoundException(`Automation task not found: ${taskId}`);
+    }
+
+    return task;
   }
 
   async markCompleted(
     taskId: string,
+    jobId: string,
     result: unknown,
   ): Promise<AutomationTask> {
-    return this.updateTask(taskId, {
+    return this.finishAttempt(taskId, jobId, {
       status: AutomationTaskStatus.Completed,
       result,
       error: null,
@@ -49,10 +56,11 @@ export class AutomationTasksService {
 
   async markPartial(
     taskId: string,
+    jobId: string,
     result: unknown,
     error?: string,
   ): Promise<AutomationTask> {
-    return this.updateTask(taskId, {
+    return this.finishAttempt(taskId, jobId, {
       status: AutomationTaskStatus.Partial,
       result,
       error: error ?? null,
@@ -63,10 +71,11 @@ export class AutomationTasksService {
 
   async markFailed(
     taskId: string,
+    jobId: string,
     error: string,
     errorType: AutomationErrorType,
   ): Promise<AutomationTask> {
-    return this.updateTask(taskId, {
+    return this.finishAttempt(taskId, jobId, {
       status: AutomationTaskStatus.Failed,
       result: null,
       error,
@@ -77,10 +86,11 @@ export class AutomationTasksService {
 
   async markManualRequired(
     taskId: string,
+    jobId: string,
     error: string,
     errorType: AutomationErrorType = AutomationErrorType.ManualRequired,
   ): Promise<AutomationTask> {
-    return this.updateTask(taskId, {
+    return this.finishAttempt(taskId, jobId, {
       status: AutomationTaskStatus.ManualRequired,
       error,
       errorType,
@@ -98,11 +108,12 @@ export class AutomationTasksService {
     return task;
   }
 
-  private async updateTask(
+  private async finishAttempt(
     taskId: string,
+    jobId: string,
     input: UpdateAutomationTaskInput,
   ): Promise<AutomationTask> {
-    const task = await this.repository.update(taskId, input);
+    const task = await this.repository.finishAttempt(taskId, jobId, input);
 
     if (!task) {
       throw new NotFoundException(`Automation task not found: ${taskId}`);

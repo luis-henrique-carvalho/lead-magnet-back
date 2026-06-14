@@ -69,4 +69,27 @@ describe('AffiliateLinkCaptureController', () => {
 
     expect(service.capture).not.toHaveBeenCalled();
   });
+
+  it('accepts a relational search origin', async () => {
+    service.capture.mockResolvedValue({
+      taskId: 'task-id',
+      statusUrl: '/automation-tasks/task-id',
+    });
+
+    await request(httpServer)
+      .post('/affiliate-link-capture')
+      .send({
+        searchId: '550e8400-e29b-41d4-a716-446655440001',
+        productId: '550e8400-e29b-41d4-a716-446655440000',
+        marketplace: Marketplace.Amazon,
+        originalProductUrl: 'https://amazon.com.br/dp/B000000001',
+      })
+      .expect(201);
+
+    expect(service.capture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        searchId: '550e8400-e29b-41d4-a716-446655440001',
+      }),
+    );
+  });
 });

@@ -62,7 +62,9 @@ export function normalizeMercadoLivreCard(
   };
 }
 
-export function pickMercadoLivreTitle(card: MercadoLivreScrapedCard): string | null {
+export function pickMercadoLivreTitle(
+  card: MercadoLivreScrapedCard,
+): string | null {
   const candidates = [card.title, card.ariaLabel, ...splitCardText(card.text)];
 
   for (const candidate of candidates) {
@@ -129,13 +131,17 @@ export function isMercadoLivreProductUrl(value: string | null): boolean {
   }
 }
 
-export function extractMercadoLivreExternalId(value: string): string | undefined {
+export function extractMercadoLivreExternalId(
+  value: string,
+): string | undefined {
   const match = value.match(/(ML[A-Z]?-\d+|MLB-[A-Z0-9-]+)/i);
 
   return match?.[1];
 }
 
-export function normalizeUrlLike(value: string | null | undefined): string | null {
+export function normalizeUrlLike(
+  value: string | null | undefined,
+): string | null {
   const normalized = value?.trim();
 
   if (!normalized) {
@@ -153,7 +159,9 @@ export function normalizeUrlLike(value: string | null | undefined): string | nul
   return null;
 }
 
-export function normalizeWhitespace(value: string | null | undefined): string | null {
+export function normalizeWhitespace(
+  value: string | null | undefined,
+): string | null {
   const normalized = value?.replace(/\s+/g, ' ').trim() || '';
 
   return normalized.length > 0 ? normalized : null;
