@@ -12,6 +12,8 @@ export type AutomationTaskDomainEvent = {
   status: AutomationTaskStatus;
   marketplace: string | null;
   updatedAt: string;
+  searchId?: string | null;
+  productId?: string | null;
 };
 
 export abstract class AutomationTaskEventsSubscriber {

@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
 
 import { AutomationTaskType } from '../../shared/enums/automation-task-type.enum';
@@ -13,15 +13,19 @@ import {
   AffiliateLinkCaptureJobData,
   CAPTURE_AFFILIATE_LINK_JOB,
 } from './jobs/affiliate-link-capture.job';
+import { AutomationTaskEventsPublisher } from '../automation-tasks/events/interfaces/automation-task-events.publisher';
 
 @Injectable()
 export class AffiliateLinkCaptureService {
+  private readonly logger = new Logger(AffiliateLinkCaptureService.name);
+
   constructor(
     @InjectQueue(AFFILIATE_LINK_CAPTURE_QUEUE)
     private readonly captureQueue: Queue<AffiliateLinkCaptureJobData>,
     private readonly automationTasksService: AutomationTasksService,
     private readonly dependenciesService: AutomationTaskDependenciesService,
     private readonly searchesService: MarketplaceProductSearchesService,
+    private readonly eventsPublisher: AutomationTaskEventsPublisher,
   ) {}
 
   async capture(
@@ -45,6 +49,23 @@ export class AffiliateLinkCaptureService {
       marketplace: input.marketplace,
       originalProductUrl: input.originalProductUrl,
     });
+
+    try {
+      await this.eventsPublisher.publish('task.created', {
+        id: task.id,
+        type: task.type,
+        status: task.status,
+        marketplace: task.marketplace,
+        updatedAt: task.updatedAt,
+        productId: input.productId,
+        ...(originSearch ? { searchId: originSearch.searchId } : {}),
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to publish task.created event for task ${task.id}: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+    }
 
     return {
       taskId: task.id,

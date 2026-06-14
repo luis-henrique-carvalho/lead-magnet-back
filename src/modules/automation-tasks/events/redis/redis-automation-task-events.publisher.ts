@@ -35,6 +35,8 @@ export class RedisAutomationTaskEventsPublisher
       status: task.status,
       marketplace: task.marketplace,
       updatedAt: task.updatedAt.toISOString(),
+      ...(task.searchId !== undefined ? { searchId: task.searchId } : {}),
+      ...(task.productId !== undefined ? { productId: task.productId } : {}),
     };
 
     await this.redis.publish(

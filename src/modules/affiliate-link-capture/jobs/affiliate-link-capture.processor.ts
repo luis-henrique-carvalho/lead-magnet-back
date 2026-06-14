@@ -31,7 +31,9 @@ export class AffiliateLinkCaptureProcessor extends WorkerHost {
     const { taskId, productId, marketplace, originalProductUrl } = job.data;
     const jobId = String(job.id ?? taskId);
 
-    await this.automationTasksService.markProcessing(taskId, jobId);
+    await this.automationTasksService.markProcessing(taskId, jobId, {
+      productId,
+    });
 
     try {
       const provider = this.providerRegistry.getProvider(marketplace);

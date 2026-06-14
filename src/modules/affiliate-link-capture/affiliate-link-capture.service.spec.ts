@@ -15,6 +15,8 @@ import {
   CAPTURE_AFFILIATE_LINK_JOB,
 } from './jobs/affiliate-link-capture.job';
 
+import { AutomationTaskEventsPublisher } from '../automation-tasks/events/interfaces/automation-task-events.publisher';
+
 describe('AffiliateLinkCaptureService', () => {
   let addJob: jest.MockedFunction<Queue<AffiliateLinkCaptureJobData>['add']>;
   let createTask: jest.MockedFunction<AutomationTasksService['create']>;
@@ -24,6 +26,7 @@ describe('AffiliateLinkCaptureService', () => {
   let findSearch: jest.MockedFunction<
     MarketplaceProductSearchesService['findById']
   >;
+  let publisher: jest.Mocked<AutomationTaskEventsPublisher>;
   let service: AffiliateLinkCaptureService;
 
   beforeEach(async () => {
@@ -31,6 +34,9 @@ describe('AffiliateLinkCaptureService', () => {
     createTask = jest.fn();
     addDependency = jest.fn();
     findSearch = jest.fn();
+    publisher = {
+      publish: jest.fn().mockResolvedValue({}),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -50,6 +56,10 @@ describe('AffiliateLinkCaptureService', () => {
         {
           provide: MarketplaceProductSearchesService,
           useValue: { findById: findSearch },
+        },
+        {
+          provide: AutomationTaskEventsPublisher,
+          useValue: publisher,
         },
       ],
     }).compile();
@@ -158,5 +168,124 @@ describe('AffiliateLinkCaptureService', () => {
     expect(createTask).not.toHaveBeenCalled();
     expect(addDependency).not.toHaveBeenCalled();
     expect(addJob).not.toHaveBeenCalled();
+  });
+
+  it('publishes task.created event with searchId and productId after successful enqueuing', async () => {
+    const taskCreatedAt = new Date('2026-06-14T10:00:00.000Z');
+    createTask.mockResolvedValue({
+      id: 'capture-task-id',
+      type: AutomationTaskType.AffiliateLinkCapture,
+      marketplace: Marketplace.Amazon,
+      status: AutomationTaskStatus.Pending,
+      result: null,
+      error: null,
+      errorType: null,
+      attempts: 0,
+      startedAt: null,
+      finishedAt: null,
+      createdAt: taskCreatedAt,
+      updatedAt: taskCreatedAt,
+    });
+    findSearch.mockResolvedValue({
+      searchId: '550e8400-e29b-41d4-a716-446655440001',
+      taskId: 'search-task-id',
+    } as any);
+
+    await service.capture({
+      searchId: '550e8400-e29b-41d4-a716-446655440001',
+      productId: '550e8400-e29b-41d4-a716-446655440000',
+      marketplace: Marketplace.Amazon,
+      originalProductUrl: 'https://amazon.com.br/dp/B000000001',
+    });
+
+    expect(publisher.publish).toHaveBeenCalledWith('task.created', {
+      id: 'capture-task-id',
+      type: AutomationTaskType.AffiliateLinkCapture,
+      status: AutomationTaskStatus.Pending,
+      marketplace: Marketplace.Amazon,
+      updatedAt: taskCreatedAt,
+      searchId: '550e8400-e29b-41d4-a716-446655440001',
+      productId: '550e8400-e29b-41d4-a716-446655440000',
+    });
+  });
+
+  it('publishes task.created without searchId for independent captures', async () => {
+    const taskCreatedAt = new Date('2026-06-14T10:00:00.000Z');
+    createTask.mockResolvedValue({
+      id: 'capture-task-id',
+      type: AutomationTaskType.AffiliateLinkCapture,
+      marketplace: Marketplace.Amazon,
+      status: AutomationTaskStatus.Pending,
+      result: null,
+      error: null,
+      errorType: null,
+      attempts: 0,
+      startedAt: null,
+      finishedAt: null,
+      createdAt: taskCreatedAt,
+      updatedAt: taskCreatedAt,
+    });
+
+    await service.capture({
+      productId: '550e8400-e29b-41d4-a716-446655440000',
+      marketplace: Marketplace.Amazon,
+      originalProductUrl: 'https://amazon.com.br/dp/B000000001',
+    });
+
+    expect(publisher.publish).toHaveBeenCalledWith('task.created', {
+      id: 'capture-task-id',
+      type: AutomationTaskType.AffiliateLinkCapture,
+      status: AutomationTaskStatus.Pending,
+      marketplace: Marketplace.Amazon,
+      updatedAt: taskCreatedAt,
+      productId: '550e8400-e29b-41d4-a716-446655440000',
+    });
+  });
+
+  it('does not publish events if task creation, dependency link, or enqueuing fails', async () => {
+    findSearch.mockResolvedValue({
+      searchId: '550e8400-e29b-41d4-a716-446655440001',
+      taskId: 'search-task-id',
+    } as any);
+    createTask.mockRejectedValue(new Error('DB error'));
+
+    await expect(
+      service.capture({
+        searchId: '550e8400-e29b-41d4-a716-446655440001',
+        productId: '550e8400-e29b-41d4-a716-446655440000',
+        marketplace: Marketplace.Amazon,
+        originalProductUrl: 'https://amazon.com.br/dp/B000000001',
+      }),
+    ).rejects.toThrow('DB error');
+
+    expect(publisher.publish).not.toHaveBeenCalled();
+  });
+
+  it('does not fail the capture operation if event publication fails', async () => {
+    const taskCreatedAt = new Date('2026-06-14T10:00:00.000Z');
+    createTask.mockResolvedValue({
+      id: 'capture-task-id',
+      type: AutomationTaskType.AffiliateLinkCapture,
+      marketplace: Marketplace.Amazon,
+      status: AutomationTaskStatus.Pending,
+      result: null,
+      error: null,
+      errorType: null,
+      attempts: 0,
+      startedAt: null,
+      finishedAt: null,
+      createdAt: taskCreatedAt,
+      updatedAt: taskCreatedAt,
+    });
+    publisher.publish.mockRejectedValue(new Error('Redis issue'));
+
+    const result = await service.capture({
+      productId: '550e8400-e29b-41d4-a716-446655440000',
+      marketplace: Marketplace.Amazon,
+      originalProductUrl: 'https://amazon.com.br/dp/B000000001',
+    });
+
+    expect(publisher.publish).toHaveBeenCalled();
+    expect(result.taskId).toBe('capture-task-id'); // operation succeeds
   });
 });

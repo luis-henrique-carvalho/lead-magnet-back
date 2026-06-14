@@ -1,19 +1,41 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 
 import {
   CreateMarketplaceProductSearchInput,
   MarketplaceProductSearchesRepository,
   Pagination,
 } from './marketplace-product-searches.repository';
+import { AutomationTaskEventsPublisher } from '../../automation-tasks/events/interfaces/automation-task-events.publisher';
 
 @Injectable()
 export class MarketplaceProductSearchesService {
+  private readonly logger = new Logger(MarketplaceProductSearchesService.name);
+
   constructor(
     private readonly repository: MarketplaceProductSearchesRepository,
+    private readonly eventsPublisher: AutomationTaskEventsPublisher,
   ) {}
 
-  create(input: CreateMarketplaceProductSearchInput) {
-    return this.repository.createWithTask(input);
+  async create(input: CreateMarketplaceProductSearchInput) {
+    const result = await this.repository.createWithTask(input);
+
+    try {
+      await this.eventsPublisher.publish('task.created', {
+        id: result.task.id,
+        type: result.task.type,
+        status: result.task.status,
+        marketplace: result.task.marketplace,
+        updatedAt: result.task.updatedAt,
+        searchId: result.id,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Failed to publish task.created event for task ${result.task.id}: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+    }
+
+    return result;
   }
 
   async findById(searchId: string) {

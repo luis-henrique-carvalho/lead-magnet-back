@@ -6,9 +6,11 @@ import { AutomationTaskType } from '../../shared/enums/automation-task-type.enum
 import { AutomationTask } from './automation-task.types';
 import { AutomationTasksRepository } from './automation-tasks.repository';
 import { AutomationTasksService } from './automation-tasks.service';
+import { AutomationTaskEventsPublisher } from './events/interfaces/automation-task-events.publisher';
 
 describe('AutomationTasksService', () => {
   let repository: jest.Mocked<AutomationTasksRepository>;
+  let publisher: jest.Mocked<AutomationTaskEventsPublisher>;
   let service: AutomationTasksService;
   let createTask: jest.MockedFunction<AutomationTasksRepository['create']>;
   let findTaskById: jest.MockedFunction<AutomationTasksRepository['findById']>;
@@ -58,11 +60,15 @@ describe('AutomationTasksService', () => {
       startAttempt,
       finishAttempt,
     };
+    publisher = {
+      publish: jest.fn().mockResolvedValue({}),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AutomationTasksService,
         { provide: AutomationTasksRepository, useValue: repository },
+        { provide: AutomationTaskEventsPublisher, useValue: publisher },
       ],
     }).compile();
 
@@ -230,5 +236,172 @@ describe('AutomationTasksService', () => {
     await expect(service.findById('missing')).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  describe('event publication on state transitions', () => {
+    it('publishes task.updated when marking processing for marketplace searches', async () => {
+      const mockTask = task({
+        status: AutomationTaskStatus.Processing,
+        type: AutomationTaskType.MarketplaceProductSearch,
+        marketplaceSearch: { id: 'search-id' } as any,
+      });
+      startAttempt.mockResolvedValue(mockTask);
+
+      await service.markProcessing('task-id', 'job-id');
+
+      expect(publisher.publish).toHaveBeenCalledWith('task.updated', {
+        id: 'task-id',
+        type: AutomationTaskType.MarketplaceProductSearch,
+        status: AutomationTaskStatus.Processing,
+        marketplace: 'amazon',
+        updatedAt: mockTask.updatedAt,
+        searchId: 'search-id',
+      });
+    });
+
+    it('publishes task.updated when marking completed for marketplace searches', async () => {
+      const mockTask = task({
+        status: AutomationTaskStatus.Completed,
+        type: AutomationTaskType.MarketplaceProductSearch,
+        marketplaceSearch: { id: 'search-id' } as any,
+      });
+      finishAttempt.mockResolvedValue(mockTask);
+
+      await service.markCompleted('task-id', 'job-id', {});
+
+      expect(publisher.publish).toHaveBeenCalledWith('task.updated', {
+        id: 'task-id',
+        type: AutomationTaskType.MarketplaceProductSearch,
+        status: AutomationTaskStatus.Completed,
+        marketplace: 'amazon',
+        updatedAt: mockTask.updatedAt,
+        searchId: 'search-id',
+      });
+    });
+
+    it('publishes task.updated when marking processing for affiliate captures (using metadata)', async () => {
+      const mockTask = task({
+        status: AutomationTaskStatus.Processing,
+        type: AutomationTaskType.AffiliateLinkCapture,
+        successorLinks: [
+          {
+            predecessor: {
+              marketplaceSearch: { id: 'search-id' },
+            },
+          },
+        ] as any,
+        attemptsHistory: [
+          {
+            number: 1,
+            jobId: 'job-id',
+            metadata: { productId: 'product-id' },
+          },
+        ] as any,
+      });
+      startAttempt.mockResolvedValue(mockTask);
+
+      await service.markProcessing('task-id', 'job-id', {
+        productId: 'product-id',
+      });
+
+      expect(publisher.publish).toHaveBeenCalledWith('task.updated', {
+        id: 'task-id',
+        type: AutomationTaskType.AffiliateLinkCapture,
+        status: AutomationTaskStatus.Processing,
+        marketplace: 'amazon',
+        updatedAt: mockTask.updatedAt,
+        searchId: 'search-id',
+        productId: 'product-id',
+      });
+    });
+
+    it('publishes task.updated when marking completed for affiliate captures (using relation)', async () => {
+      const mockTask = task({
+        status: AutomationTaskStatus.Completed,
+        type: AutomationTaskType.AffiliateLinkCapture,
+        successorLinks: [
+          {
+            predecessor: {
+              marketplaceSearch: { id: 'search-id' },
+            },
+          },
+        ] as any,
+        affiliateLinkCapture: {
+          sourceProductId: 'product-id',
+        } as any,
+      });
+      finishAttempt.mockResolvedValue(mockTask);
+
+      await service.markCompleted('task-id', 'job-id', {});
+
+      expect(publisher.publish).toHaveBeenCalledWith('task.updated', {
+        id: 'task-id',
+        type: AutomationTaskType.AffiliateLinkCapture,
+        status: AutomationTaskStatus.Completed,
+        marketplace: 'amazon',
+        updatedAt: mockTask.updatedAt,
+        searchId: 'search-id',
+        productId: 'product-id',
+      });
+    });
+
+    it('publishes task.updated for independent affiliate captures (without searchId)', async () => {
+      const mockTask = task({
+        status: AutomationTaskStatus.Completed,
+        type: AutomationTaskType.AffiliateLinkCapture,
+        affiliateLinkCapture: {
+          sourceProductId: 'product-id',
+        } as any,
+      });
+      finishAttempt.mockResolvedValue(mockTask);
+
+      await service.markCompleted('task-id', 'job-id', {});
+
+      expect(publisher.publish).toHaveBeenCalledWith('task.updated', {
+        id: 'task-id',
+        type: AutomationTaskType.AffiliateLinkCapture,
+        status: AutomationTaskStatus.Completed,
+        marketplace: 'amazon',
+        updatedAt: mockTask.updatedAt,
+        productId: 'product-id',
+      });
+    });
+
+    it('does not publish events if the task is not a marketplace product search or affiliate link capture', async () => {
+      const mockTask = task({
+        status: AutomationTaskStatus.Completed,
+        type: AutomationTaskType.FetchRenderedHtml,
+      });
+      finishAttempt.mockResolvedValue(mockTask);
+
+      await service.markCompleted('task-id', 'job-id', {});
+
+      expect(publisher.publish).not.toHaveBeenCalled();
+    });
+
+    it('does not publish events if the update fails or task is not found', async () => {
+      finishAttempt.mockResolvedValue(null);
+
+      await expect(
+        service.markCompleted('task-id', 'job-id', {}),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(publisher.publish).not.toHaveBeenCalled();
+    });
+
+    it('does not fail the transition if event publication throws an error', async () => {
+      const mockTask = task({
+        status: AutomationTaskStatus.Completed,
+        type: AutomationTaskType.MarketplaceProductSearch,
+        marketplaceSearch: { id: 'search-id' } as any,
+      });
+      finishAttempt.mockResolvedValue(mockTask);
+      publisher.publish.mockRejectedValue(new Error('Redis offline'));
+
+      const result = await service.markCompleted('task-id', 'job-id', {});
+
+      expect(publisher.publish).toHaveBeenCalled();
+      expect(result).toEqual(mockTask); // transition succeeds
+    });
   });
 });

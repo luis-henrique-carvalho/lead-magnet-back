@@ -60,7 +60,9 @@ export type AffiliateLinkCaptureResult = {
 export type AutomationTaskDependency = {
   predecessorId: string;
   required: boolean;
-  predecessor: Pick<AutomationTask, 'id' | 'status' | 'type'>;
+  predecessor: Pick<AutomationTask, 'id' | 'status' | 'type'> & {
+    marketplaceSearch?: { id: string } | null;
+  };
 };
 
 export type CreateAutomationTaskInput = {

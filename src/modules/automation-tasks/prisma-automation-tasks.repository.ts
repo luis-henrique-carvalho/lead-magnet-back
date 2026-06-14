@@ -35,7 +35,11 @@ export class PrismaAutomationTasksRepository implements AutomationTasksRepositor
         affiliateLinkCapture: true,
         successorLinks: {
           include: {
-            predecessor: { select: { id: true, status: true, type: true } },
+            predecessor: {
+              include: {
+                marketplaceSearch: true,
+              },
+            },
           },
         },
       },

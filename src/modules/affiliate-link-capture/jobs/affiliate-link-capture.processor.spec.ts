@@ -100,7 +100,9 @@ describe('AffiliateLinkCaptureProcessor', () => {
       originalProductUrl: jobData.originalProductUrl,
       capturedAffiliateUrl: 'https://affiliate.example/link',
     });
-    expect(markProcessing).toHaveBeenCalledWith('task-id', 'task-id');
+    expect(markProcessing).toHaveBeenCalledWith('task-id', 'task-id', {
+      productId: jobData.productId,
+    });
     expect(getProvider).toHaveBeenCalledWith(Marketplace.Amazon);
     expect(captureAffiliateLink).toHaveBeenCalledWith({
       productId: jobData.productId,

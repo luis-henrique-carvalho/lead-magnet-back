@@ -7,7 +7,10 @@ import {
 export type PublishableAutomationTask = Pick<
   AutomationTask,
   'id' | 'type' | 'status' | 'marketplace' | 'updatedAt'
->;
+> & {
+  searchId?: string | null;
+  productId?: string | null;
+};
 
 export abstract class AutomationTaskEventsPublisher {
   abstract publish(
