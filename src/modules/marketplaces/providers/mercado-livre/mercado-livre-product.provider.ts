@@ -6,6 +6,7 @@ import {
   BrowserSessionStateError,
   PlaywrightService,
 } from '../../../../infra/browser';
+import { AutomationErrorType } from '../../../../shared/enums/automation-error-type.enum';
 import { Marketplace } from '../../../../shared/enums/marketplace.enum';
 
 import {
@@ -14,6 +15,7 @@ import {
   MarketplaceProductSearchProvider,
   SearchProductsInput,
 } from '../marketplace-product-search-provider.interface';
+import { MarketplaceProductSearchError } from '../marketplace-product-search.error';
 
 import {
   MERCADO_LIVRE_HUB_URL,
@@ -21,6 +23,31 @@ import {
   normalizeMercadoLivreCard,
   parseMercadoLivrePrice,
 } from './mercado-livre-product-parser.utils';
+
+const HUB_READY_SELECTOR =
+  '#recommendations_card, .polycards__container, .recommendations-filters-desktop';
+const HUB_READY_TIMEOUT_MS = 15_000;
+const SEARCH_INPUT_SELECTOR =
+  'input[data-andes-searchbox-input="true"], input[placeholder*="buscar" i], input[placeholder*="busque" i]';
+const CAPTCHA_SELECTOR = [
+  'iframe[src*="captcha" i]',
+  '[data-testid*="captcha" i]',
+  'input[name*="captcha" i]',
+  'body:has-text("Não sou um robô")',
+  'body:has-text("Nao sou um robo")',
+  'body:has-text("captcha")',
+].join(', ');
+const SESSION_INVALID_SELECTOR = [
+  '[data-testid="login-form"]',
+  'input[name="user_id"]',
+  'input[name="password"]',
+  'form[action*="login" i]',
+  'body:has-text("Digite seu e-mail ou telefone")',
+  'body:has-text("iniciar sessão")',
+  'body:has-text("Entre na sua conta")',
+].join(', ');
+const THROTTLING_TEXT_PATTERN =
+  /muitas requisi(?:ç|c)ões|too many requests|rate limit|tente novamente mais tarde/i;
 
 @Injectable()
 export class MercadoLivreProductProvider implements MarketplaceProductSearchProvider {
@@ -41,10 +68,13 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
       this.logger.log('Hub session opened. Waiting for load state...');
       await session.page.waitForLoadState('networkidle').catch(() => undefined);
 
+      await this.assertHubPageCanBeScraped(session.page);
       await this.waitForHubPage(session.page);
+      await this.assertHubPageCanBeScraped(session.page);
 
       if (input.query) {
         await this.executeSearchQuery(session.page, input.query);
+        await this.assertHubPageCanBeScraped(session.page);
       }
 
       let products = await this.scrapeProducts(session.page);
@@ -56,6 +86,8 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
         await this.tryRevealProductsTab(session.page);
         products = await this.scrapeProducts(session.page);
       }
+
+      products = this.filterProducts(products, input);
 
       if (input.category) {
         this.logger.log(
@@ -80,41 +112,126 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
 
   private async waitForHubPage(page: Page): Promise<void> {
     this.logger.log('Waiting for page elements to render...');
-    await page
-      .locator(
-        '#recommendations_card, .polycards__container, .recommendations-filters-desktop',
-      )
-      .first()
-      .waitFor({ state: 'visible', timeout: 15000 })
-      .catch((error: unknown) => this.handlePageTimeout(page, error));
+    try {
+      await page
+        .locator(HUB_READY_SELECTOR)
+        .first()
+        .waitFor({ state: 'visible', timeout: HUB_READY_TIMEOUT_MS });
+    } catch (error) {
+      throw await this.mapHubReadyTimeout(page, error);
+    }
   }
 
-  private async handlePageTimeout(page: Page, error: unknown): Promise<void> {
+  private async mapHubReadyTimeout(
+    page: Page,
+    error: unknown,
+  ): Promise<MarketplaceProductSearchError> {
+    const state = await this.getPageState(page);
+    const detectedError = await this.detectPageError(page, state);
     const err = error instanceof Error ? error : new Error(String(error));
+
+    this.logger.warn(
+      `Wait for page elements timed out: ${err.message}. Current URL: ${state.currentUrl}, Page Title: "${state.pageTitle}"`,
+    );
+
+    if (detectedError) {
+      return detectedError;
+    }
+
+    this.logger.warn(`Body snippet: ${state.bodySnippet}`);
+
+    return new MarketplaceProductSearchError(
+      'Mercado Livre hub layout was not recognized',
+      AutomationErrorType.LayoutChanged,
+      error,
+    );
+  }
+
+  private async assertHubPageCanBeScraped(page: Page): Promise<void> {
+    const state = await this.getPageState(page);
+    const detectedError = await this.detectPageError(page, state);
+
+    if (detectedError) {
+      throw detectedError;
+    }
+  }
+
+  private async detectPageError(
+    page: Page,
+    state: {
+      currentUrl: string;
+      pageTitle: string;
+      bodyText: string;
+    },
+  ): Promise<MarketplaceProductSearchError | null> {
+    const haystack = `${state.currentUrl} ${state.pageTitle} ${state.bodyText}`;
+
+    if (
+      (await this.isVisible(page, CAPTCHA_SELECTOR)) ||
+      /captcha|não sou um robô|nao sou um robo|robot/i.test(haystack)
+    ) {
+      return new MarketplaceProductSearchError(
+        'Mercado Livre requires CAPTCHA resolution',
+        AutomationErrorType.CaptchaRequired,
+      );
+    }
+
+    if (THROTTLING_TEXT_PATTERN.test(haystack)) {
+      return new MarketplaceProductSearchError(
+        'Mercado Livre throttled the product search',
+        AutomationErrorType.Throttling,
+      );
+    }
+
+    const currentUrl = state.currentUrl.toLowerCase();
+    const redirectedToLogin =
+      currentUrl.includes('/jms/mlb/lgz/msl/login') ||
+      currentUrl.includes('/login') ||
+      currentUrl.includes('auth.mercadolivre.com') ||
+      currentUrl.includes('registration.mercadolivre.com');
+
+    if (
+      redirectedToLogin ||
+      (await this.isVisible(page, SESSION_INVALID_SELECTOR)) ||
+      /digite seu e-mail ou telefone|iniciar sessão|entre na sua conta/i.test(
+        haystack,
+      )
+    ) {
+      return new MarketplaceProductSearchError(
+        'Mercado Livre authenticated session is invalid or expired',
+        AutomationErrorType.SessionInvalid,
+      );
+    }
+
+    return null;
+  }
+
+  private async getPageState(page: Page): Promise<{
+    currentUrl: string;
+    pageTitle: string;
+    bodyText: string;
+    bodySnippet: string;
+  }> {
     const currentUrl = page.url();
     const pageTitle = await page.title().catch(() => 'unknown');
     const bodyText = await page
-      .evaluate(() => document.body.innerText)
+      .evaluate(() => document.body?.innerText ?? '')
       .catch(() => '');
-    this.logger.warn(
-      `Wait for page elements timed out: ${err.message}. Current URL: ${currentUrl}, Page Title: "${pageTitle}"`,
-    );
-    if (
-      bodyText.toLowerCase().includes('login') ||
-      bodyText.toLowerCase().includes('entrar')
-    ) {
-      this.logger.warn('Page content seems to request login/authentication.');
-    } else if (
-      bodyText.toLowerCase().includes('robo') ||
-      bodyText.toLowerCase().includes('robot') ||
-      bodyText.toLowerCase().includes('captcha')
-    ) {
-      this.logger.warn('Page content seems to contain a CAPTCHA challenge.');
-    } else {
-      this.logger.warn(
-        `Body snippet: ${bodyText.substring(0, 500).replace(/\s+/g, ' ')}...`,
-      );
-    }
+
+    return {
+      currentUrl,
+      pageTitle,
+      bodyText,
+      bodySnippet: `${bodyText.substring(0, 500).replace(/\s+/g, ' ')}...`,
+    };
+  }
+
+  private async isVisible(page: Page, selector: string): Promise<boolean> {
+    return page
+      .locator(selector)
+      .first()
+      .isVisible()
+      .catch(() => false);
   }
 
   private async executeSearchQuery(page: Page, query: string): Promise<void> {
@@ -122,11 +239,7 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
       `Query parameter is present. Executing search on page for "${query}"...`,
     );
 
-    const searchInput = page
-      .locator(
-        'input[data-andes-searchbox-input="true"], input[placeholder*="buscar" i], input[placeholder*="busque" i]',
-      )
-      .first();
+    const searchInput = page.locator(SEARCH_INPUT_SELECTOR).first();
 
     if (!(await searchInput.isVisible().catch(() => false))) {
       this.logger.log(
@@ -166,9 +279,7 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
           this.logger.log('Found "Procurar" tab by text. Clicking it.');
           await textSearchTab.click();
         } else {
-          this.logger.warn(
-            'Could not find any visible "Procurar" tab/button to reveal search input.',
-          );
+          throw this.layoutChanged('Mercado Livre search tab was not found');
         }
       }
     }
@@ -186,7 +297,7 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
       await page.waitForLoadState('networkidle').catch(() => undefined);
       await page.waitForTimeout(1000).catch(() => undefined);
     } else {
-      this.logger.warn('Search input textbox is not visible or not found.');
+      throw this.layoutChanged('Mercado Livre search input was not found');
     }
   }
 
@@ -283,8 +394,10 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
         error instanceof BrowserSessionNotConfiguredError ||
         error instanceof BrowserSessionStateError
       ) {
-        throw new Error(
+        throw new MarketplaceProductSearchError(
           `Mercado Livre browser session is not available: ${error.message}`,
+          AutomationErrorType.SessionInvalid,
+          error,
         );
       }
 
@@ -458,6 +571,13 @@ export class MercadoLivreProductProvider implements MarketplaceProductSearchProv
     );
 
     return normalized;
+  }
+
+  private layoutChanged(message: string): MarketplaceProductSearchError {
+    return new MarketplaceProductSearchError(
+      message,
+      AutomationErrorType.LayoutChanged,
+    );
   }
 
   private filterProducts(

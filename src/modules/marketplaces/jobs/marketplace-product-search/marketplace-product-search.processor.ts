@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 
 import { AutomationTasksService } from '../../../automation-tasks/automation-tasks.service';
 import { AutomationErrorType } from '../../../../shared/enums/automation-error-type.enum';
+import { MarketplaceProductSearchError } from '../../providers/marketplace-product-search.error';
 import { MarketplaceProductProviderRegistry } from '../../providers/marketplace-product-provider.registry';
 import { MarketplaceProductsService } from '../../products/marketplace-products.service';
 import {
@@ -64,7 +65,7 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
     } catch (error) {
       const mappedError = this.mapError(error);
 
-      if (mappedError.errorType === AutomationErrorType.CaptchaRequired) {
+      if (this.requiresManualAction(mappedError.errorType)) {
         this.logger.warn(
           `Product search requires manual action for task ${taskId}: ${mappedError.message}`,
         );
@@ -95,6 +96,13 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
     const message = error instanceof Error ? error.message : 'Unknown error';
     const normalizedMessage = message.toLowerCase();
 
+    if (error instanceof MarketplaceProductSearchError) {
+      return {
+        message,
+        errorType: error.errorType,
+      };
+    }
+
     if (
       normalizedMessage.includes('captcha') ||
       this.hasErrorCode(error, 'CAPTCHA_REQUIRED')
@@ -116,6 +124,39 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
       };
     }
 
+    if (
+      normalizedMessage.includes('session') ||
+      normalizedMessage.includes('login') ||
+      normalizedMessage.includes('authenticated')
+    ) {
+      return {
+        message,
+        errorType: AutomationErrorType.SessionInvalid,
+      };
+    }
+
+    if (
+      normalizedMessage.includes('layout') ||
+      normalizedMessage.includes('selector') ||
+      normalizedMessage.includes('not found')
+    ) {
+      return {
+        message,
+        errorType: AutomationErrorType.LayoutChanged,
+      };
+    }
+
+    if (
+      normalizedMessage.includes('too many requests') ||
+      normalizedMessage.includes('rate limit') ||
+      this.hasErrorCode(error, 'RATE_LIMITED')
+    ) {
+      return {
+        message,
+        errorType: AutomationErrorType.Throttling,
+      };
+    }
+
     return {
       message,
       errorType: AutomationErrorType.InternalError,
@@ -129,5 +170,15 @@ export class MarketplaceProductSearchProcessor extends WorkerHost {
       'code' in error &&
       error.code === code
     );
+  }
+
+  private requiresManualAction(errorType: AutomationErrorType): boolean {
+    return [
+      AutomationErrorType.AuthError,
+      AutomationErrorType.CaptchaRequired,
+      AutomationErrorType.LayoutChanged,
+      AutomationErrorType.ManualRequired,
+      AutomationErrorType.SessionInvalid,
+    ].includes(errorType);
   }
 }

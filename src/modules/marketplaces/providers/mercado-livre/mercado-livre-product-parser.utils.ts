@@ -3,15 +3,42 @@ import { MarketplaceProduct } from '../marketplace-product-search-provider.inter
 
 export const MERCADO_LIVRE_HUB_URL =
   'https://www.mercadolivre.com.br/afiliados/hub?is_affiliate=true#menu-user';
-export const PRODUCT_HOST_PATTERN = /mercadolivre|mercadolibre/i;
-export const PRODUCT_PATH_EXCLUSIONS = ['/afiliados/', '/hub'];
+export const PRODUCT_HOST_PATTERN =
+  /(^|\.)mercadolivre\.com(?:\.br)?$|(^|\.)mercadolibre\./i;
+export const PRODUCT_PATH_EXCLUSIONS = [
+  '/afiliados/',
+  '/hub',
+  '/jms/',
+  '/login',
+  '/registration',
+  '/privacidade',
+  '/acessibilidade',
+  '/ato-complaint',
+  '/help',
+  '/ajuda',
+];
 export const MENU_TEXTS = [
   'produtos selecionados para você',
   'procurar',
   'filtrar',
   'ganhos extras',
   'mais',
+  'tenho um problema de segurança',
+  'preciso de ajuda',
+  'criar conta',
+  'iniciar sessão',
+  'digite seu e-mail',
+  'como cuidamos da sua privacidade',
+  'pular para o conteúdo',
+  'comentar sobre acessibilidade',
 ];
+const PRODUCT_ID_PATTERN = /\bML[A-Z]?-?\d{3,}\b/i;
+const PRODUCT_PAGE_PATTERN = /\/p\/ML[A-Z]?\d{3,}\b/i;
+const CLICK_PRODUCT_PATH_PATTERN =
+  /\/mclics\/clicks\/external\/ML[A-Z]\/count/i;
+const SCRIPT_OR_STYLE_PATTERN =
+  /(?:^|\s)(?:a\.nav-|window\.|use strict|position:\s*absolute|background:\s*#|z-index:)/i;
+const MAX_PRODUCT_TITLE_LENGTH = 180;
 
 export type MercadoLivreScrapedCard = {
   id?: string | null;
@@ -43,14 +70,21 @@ export function normalizeMercadoLivreCard(
   const text = normalizeWhitespace(
     [card.title, card.ariaLabel, card.text].filter(Boolean).join(' '),
   );
+  const externalId = card.id || extractMercadoLivreExternalId(card.href);
+  const imageUrl = normalizeUrlLike(card.imageUrl) || undefined;
+  const price = parseMercadoLivrePrice(card.priceText || text || undefined);
+
+  if (!externalId && !imageUrl && !price) {
+    return null;
+  }
 
   return {
-    externalId: card.id || extractMercadoLivreExternalId(card.href),
+    externalId,
     marketplace: Marketplace.MercadoLivre,
     title,
     originalUrl: card.href,
-    imageUrl: normalizeUrlLike(card.imageUrl) || undefined,
-    price: parseMercadoLivrePrice(card.priceText || text || undefined),
+    imageUrl,
+    price,
     rating: parseMercadoLivreNumber(card.ratingText || text || undefined),
     reviewsCount: parseMercadoLivreCount(card.reviewsText || text || undefined),
     salesCount: parseMercadoLivreCount(card.salesText || text || undefined),
@@ -96,7 +130,15 @@ export function looksLikeProductTitle(value: string | null): boolean {
 
   const lowered = value.toLowerCase();
 
+  if (value.length > MAX_PRODUCT_TITLE_LENGTH) {
+    return false;
+  }
+
   if (MENU_TEXTS.some((menuText) => lowered.includes(menuText))) {
+    return false;
+  }
+
+  if (SCRIPT_OR_STYLE_PATTERN.test(value)) {
     return false;
   }
 
@@ -123,8 +165,27 @@ export function isMercadoLivreProductUrl(value: string | null): boolean {
       return false;
     }
 
-    return !PRODUCT_PATH_EXCLUSIONS.some((segment) =>
-      url.pathname.toLowerCase().includes(segment),
+    if (
+      PRODUCT_PATH_EXCLUSIONS.some((segment) =>
+        url.pathname.toLowerCase().includes(segment),
+      )
+    ) {
+      return false;
+    }
+
+    const decodedSearch = decodeURIComponent(url.search);
+    const productMarkers = [
+      url.pathname,
+      decodedSearch,
+      url.hash,
+      url.searchParams.get('wid') ?? '',
+      url.searchParams.get('pdp_filters') ?? '',
+    ].join(' ');
+
+    return (
+      PRODUCT_PAGE_PATTERN.test(url.pathname) ||
+      PRODUCT_ID_PATTERN.test(productMarkers) ||
+      CLICK_PRODUCT_PATH_PATTERN.test(url.pathname)
     );
   } catch {
     return false;
@@ -134,9 +195,33 @@ export function isMercadoLivreProductUrl(value: string | null): boolean {
 export function extractMercadoLivreExternalId(
   value: string,
 ): string | undefined {
-  const match = value.match(/(ML[A-Z]?-\d+|MLB-[A-Z0-9-]+)/i);
+  const directMatch = value.match(PRODUCT_ID_PATTERN);
 
-  return match?.[1];
+  if (directMatch) {
+    return directMatch[0];
+  }
+
+  try {
+    const url = new URL(value);
+    const candidates = [
+      url.searchParams.get('wid'),
+      url.searchParams.get('pdp_filters'),
+      decodeURIComponent(url.search),
+      url.hash,
+    ].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const match = candidate?.match(PRODUCT_ID_PATTERN);
+
+      if (match) {
+        return match[0];
+      }
+    }
+  } catch {
+    return undefined;
+  }
+
+  return undefined;
 }
 
 export function normalizeUrlLike(

@@ -5,6 +5,7 @@ import { Job } from 'bullmq';
 import { AutomationTasksService } from '../../../automation-tasks/automation-tasks.service';
 import { AutomationErrorType } from '../../../../shared/enums/automation-error-type.enum';
 import { Marketplace } from '../../../../shared/enums/marketplace.enum';
+import { MarketplaceProductSearchError } from '../../providers/marketplace-product-search.error';
 import { MarketplaceProductProviderRegistry } from '../../providers/marketplace-product-provider.registry';
 import { MarketplaceProductSearchProvider } from '../../providers/marketplace-product-search-provider.interface';
 import { MarketplaceProductsService } from '../../products/marketplace-products.service';
@@ -149,6 +150,25 @@ describe('MarketplaceProductSearchProcessor', () => {
       'task-id',
       'CAPTCHA_REQUIRED',
       AutomationErrorType.CaptchaRequired,
+    );
+    expect(markFailed).not.toHaveBeenCalled();
+    expect(saveSearchResults).not.toHaveBeenCalled();
+  });
+
+  it('maps typed manual provider errors to manual_required without retrying the job', async () => {
+    searchProducts.mockRejectedValue(
+      new MarketplaceProductSearchError(
+        'Mercado Livre authenticated session is invalid or expired',
+        AutomationErrorType.SessionInvalid,
+      ),
+    );
+
+    await expect(processor.process(createJob())).resolves.toBeUndefined();
+    expect(markManualRequired).toHaveBeenCalledWith(
+      'task-id',
+      'task-id',
+      'Mercado Livre authenticated session is invalid or expired',
+      AutomationErrorType.SessionInvalid,
     );
     expect(markFailed).not.toHaveBeenCalled();
     expect(saveSearchResults).not.toHaveBeenCalled();
