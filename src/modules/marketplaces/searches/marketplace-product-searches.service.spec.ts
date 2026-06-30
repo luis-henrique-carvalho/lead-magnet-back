@@ -35,6 +35,7 @@ describe('MarketplaceProductSearchesService', () => {
       findById: jest.fn(),
       findProducts: jest.fn(),
       findAffiliateLinkCaptureTasks: jest.fn(),
+      findAll: jest.fn(),
     };
 
     publisher = {
@@ -99,6 +100,48 @@ describe('MarketplaceProductSearchesService', () => {
       expect(repository.createWithTask).toHaveBeenCalledWith(input);
       expect(publisher.publish).toHaveBeenCalled();
       expect(result).toEqual(mockResult); // Operation succeeds despite publisher failure
+    });
+  });
+
+  describe('findAll', () => {
+    it('returns a paginated list of search history items', async () => {
+      const mockHistory = {
+        items: [
+          {
+            searchId: 'search-id',
+            taskId: 'task-id',
+            marketplace: 'amazon' as any,
+            query: 'kindle',
+            category: 'electronics',
+            requestedLimit: 20,
+            foundCount: 15,
+            savedCount: 14,
+            createdAt: new Date(),
+            completedAt: new Date(),
+            task: {
+              status: 'completed' as any,
+              error: null,
+              errorType: null,
+              startedAt: new Date(),
+              finishedAt: new Date(),
+              updatedAt: new Date(),
+            },
+          },
+        ],
+        page: 1,
+        limit: 10,
+        total: 1,
+      };
+
+      repository.findAll.mockResolvedValue(mockHistory);
+
+      const result = await service.findAll({ page: 1, limit: 10 });
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10 },
+        undefined,
+      );
+      expect(result).toEqual(mockHistory);
     });
   });
 });

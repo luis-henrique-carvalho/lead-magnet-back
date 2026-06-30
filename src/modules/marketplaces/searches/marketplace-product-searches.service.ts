@@ -4,6 +4,7 @@ import {
   CreateMarketplaceProductSearchInput,
   MarketplaceProductSearchesRepository,
   Pagination,
+  MarketplaceSearchHistoryFilters,
 } from './marketplace-product-searches.repository';
 import { AutomationTaskEventsPublisher } from '../../automation-tasks/events/interfaces/automation-task-events.publisher';
 
@@ -66,5 +67,12 @@ export class MarketplaceProductSearchesService {
     if (!tasks) throw new NotFoundException('Marketplace search not found');
 
     return tasks;
+  }
+
+  async findAll(
+    pagination: Pagination,
+    filters?: MarketplaceSearchHistoryFilters,
+  ) {
+    return this.repository.findAll(pagination, filters);
   }
 }

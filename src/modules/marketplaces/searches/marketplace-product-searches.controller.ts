@@ -5,6 +5,8 @@ import { PaginationQueryDto } from '../dto/pagination-query.dto';
 import { MarketplaceSearchAffiliateCaptureTasksResponseDto } from './dto/marketplace-search-affiliate-capture-tasks-response.dto';
 import { MarketplaceProductSearchResponseDto } from './dto/marketplace-product-search-response.dto';
 import { MarketplaceSearchProductsResponseDto } from './dto/marketplace-search-products-response.dto';
+import { MarketplaceProductSearchHistoryResponseDto } from './dto/marketplace-product-search-history-response.dto';
+import { MarketplaceSearchHistoryQueryDto } from './dto/marketplace-search-history-query.dto';
 import { MarketplaceProductSearchesService } from './marketplace-product-searches.service';
 
 @ApiTags('marketplace-searches')
@@ -13,6 +15,14 @@ export class MarketplaceProductSearchesController {
   constructor(
     private readonly searchesService: MarketplaceProductSearchesService,
   ) {}
+
+  @Get()
+  @ApiOperation({ summary: 'List all marketplace product searches (history)' })
+  @ApiOkResponse({ type: MarketplaceProductSearchHistoryResponseDto })
+  findAll(@Query() query: MarketplaceSearchHistoryQueryDto) {
+    const { page, limit, ...filters } = query;
+    return this.searchesService.findAll({ page, limit }, filters);
+  }
 
   @Get(':searchId')
   @ApiOperation({ summary: 'Get a marketplace product search' })

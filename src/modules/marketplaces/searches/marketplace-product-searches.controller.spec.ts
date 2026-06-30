@@ -17,6 +17,7 @@ describe('MarketplaceProductSearchesController', () => {
     findAffiliateLinkCaptureTasks: jest.fn(),
     findById: jest.fn(),
     findProducts: jest.fn(),
+    findAll: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -140,5 +141,95 @@ describe('MarketplaceProductSearchesController', () => {
     await request(httpServer)
       .get('/marketplace-searches/missing/affiliate-link-capture-tasks')
       .expect(404);
+  });
+
+  describe('GET /marketplace-searches', () => {
+    it('returns paginated search history items', async () => {
+      const responseBody = {
+        items: [
+          {
+            searchId: 'search-id',
+            taskId: 'task-id',
+            marketplace: 'amazon',
+            query: 'kindle',
+            category: 'electronics',
+            requestedLimit: 20,
+            foundCount: 15,
+            savedCount: 14,
+            createdAt: '2026-06-14T10:00:00.000Z',
+            completedAt: '2026-06-14T10:01:00.000Z',
+            task: {
+              status: 'completed',
+              error: null,
+              errorType: null,
+              startedAt: '2026-06-14T10:00:10.000Z',
+              finishedAt: '2026-06-14T10:01:00.000Z',
+              updatedAt: '2026-06-14T10:01:00.000Z',
+            },
+          },
+        ],
+        page: 1,
+        limit: 10,
+        total: 1,
+      };
+
+      service.findAll.mockResolvedValue(responseBody);
+
+      await request(httpServer)
+        .get('/marketplace-searches?page=1&limit=10')
+        .expect(200)
+        .expect(responseBody);
+
+      expect(service.findAll).toHaveBeenCalledWith({ page: 1, limit: 10 }, {});
+    });
+
+    it('rejects invalid pagination parameters', async () => {
+      await request(httpServer)
+        .get('/marketplace-searches?page=-1&limit=200')
+        .expect(400);
+
+      expect(service.findAll).not.toHaveBeenCalled();
+    });
+
+    it('returns filtered search history items by query, marketplace, and status', async () => {
+      const responseBody = { items: [], page: 1, limit: 10, total: 0 };
+      service.findAll.mockResolvedValue(responseBody);
+
+      await request(httpServer)
+        .get(
+          '/marketplace-searches?page=1&limit=10&query=kindle&marketplace=amazon&status=completed',
+        )
+        .expect(200)
+        .expect(responseBody);
+
+      expect(service.findAll).toHaveBeenCalledWith(
+        { page: 1, limit: 10 },
+        { query: 'kindle', marketplace: 'amazon', status: 'completed' },
+      );
+    });
+
+    it('rejects invalid marketplace parameter', async () => {
+      await request(httpServer)
+        .get('/marketplace-searches?marketplace=invalid-marketplace')
+        .expect(400);
+
+      expect(service.findAll).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid status parameter', async () => {
+      await request(httpServer)
+        .get('/marketplace-searches?status=invalid-status')
+        .expect(400);
+
+      expect(service.findAll).not.toHaveBeenCalled();
+    });
+
+    it('rejects unknown parameters', async () => {
+      await request(httpServer)
+        .get('/marketplace-searches?unknownParam=value')
+        .expect(400);
+
+      expect(service.findAll).not.toHaveBeenCalled();
+    });
   });
 });

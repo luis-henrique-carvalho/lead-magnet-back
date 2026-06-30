@@ -11,6 +11,8 @@ import {
   PaginatedMarketplaceSearchAffiliateCaptureTasks,
   PaginatedMarketplaceSearchProducts,
   Pagination,
+  PaginatedMarketplaceProductSearchHistory,
+  MarketplaceSearchHistoryFilters,
 } from './marketplace-product-searches.repository';
 
 @Injectable()
@@ -193,6 +195,63 @@ export class PrismaMarketplaceProductSearchesRepository implements MarketplacePr
         startedAt: successor.startedAt,
         finishedAt: successor.finishedAt,
         capturedAt: successor.affiliateLinkCapture?.createdAt ?? null,
+      })),
+      ...pagination,
+      total,
+    };
+  }
+
+  async findAll(
+    pagination: Pagination,
+    filters?: MarketplaceSearchHistoryFilters,
+  ): Promise<PaginatedMarketplaceProductSearchHistory> {
+    const where: any = {};
+
+    if (filters) {
+      if (filters.query) {
+        where.query = { contains: filters.query, mode: 'insensitive' };
+      }
+      if (filters.marketplace) {
+        where.marketplace = filters.marketplace;
+      }
+      if (filters.status) {
+        where.task = { status: filters.status };
+      }
+    }
+
+    const [total, searches] = await this.prisma.$transaction([
+      this.prisma.marketplaceProductSearch.count({ where }),
+      this.prisma.marketplaceProductSearch.findMany({
+        where,
+        skip: (pagination.page - 1) * pagination.limit,
+        take: pagination.limit,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        include: {
+          task: true,
+        },
+      }),
+    ]);
+
+    return {
+      items: searches.map((search) => ({
+        searchId: search.id,
+        taskId: search.taskId,
+        marketplace: search.marketplace as any,
+        query: search.query,
+        category: search.category,
+        requestedLimit: search.requestedLimit,
+        foundCount: search.foundCount,
+        savedCount: search.savedCount,
+        createdAt: search.createdAt,
+        completedAt: search.completedAt,
+        task: {
+          status: search.task.status as any,
+          error: search.task.error,
+          errorType: search.task.errorType as any,
+          startedAt: search.task.startedAt,
+          finishedAt: search.task.finishedAt,
+          updatedAt: search.task.updatedAt,
+        },
       })),
       ...pagination,
       total,

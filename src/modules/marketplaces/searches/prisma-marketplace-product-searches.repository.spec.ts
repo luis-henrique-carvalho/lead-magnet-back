@@ -7,6 +7,8 @@ import { PrismaMarketplaceProductSearchesRepository } from './prisma-marketplace
 
 describe('PrismaMarketplaceProductSearchesRepository queries', () => {
   const findSearch = jest.fn();
+  const countSearches = jest.fn();
+  const findSearches = jest.fn();
   const countResults = jest.fn();
   const findResults = jest.fn();
   const countDependencies = jest.fn();
@@ -14,7 +16,11 @@ describe('PrismaMarketplaceProductSearchesRepository queries', () => {
   const transaction = jest.fn();
   const prisma = {
     $transaction: transaction,
-    marketplaceProductSearch: { findUnique: findSearch },
+    marketplaceProductSearch: {
+      findUnique: findSearch,
+      count: countSearches,
+      findMany: findSearches,
+    },
     marketplaceProductSearchResult: {
       count: countResults,
       findMany: findResults,
@@ -260,5 +266,161 @@ describe('PrismaMarketplaceProductSearchesRepository queries', () => {
         ],
       }),
     );
+  });
+
+  describe('findAll', () => {
+    it('returns a paginated list of search history items ordered by createdAt DESC', async () => {
+      const createdAt1 = new Date('2026-06-14T10:00:00.000Z');
+      const createdAt2 = new Date('2026-06-14T11:00:00.000Z');
+      const taskUpdatedAt1 = new Date('2026-06-14T10:05:00.000Z');
+      const taskUpdatedAt2 = new Date('2026-06-14T11:05:00.000Z');
+
+      transaction.mockResolvedValue([
+        2,
+        [
+          {
+            id: 'search-2',
+            taskId: 'task-2',
+            marketplace: 'amazon',
+            query: 'kindle',
+            category: 'electronics',
+            requestedLimit: 20,
+            foundCount: 15,
+            savedCount: 14,
+            createdAt: createdAt2,
+            completedAt: createdAt2,
+            task: {
+              status: 'completed',
+              error: null,
+              errorType: null,
+              startedAt: createdAt2,
+              finishedAt: createdAt2,
+              updatedAt: taskUpdatedAt2,
+            },
+          },
+          {
+            id: 'search-1',
+            taskId: 'task-1',
+            marketplace: 'amazon',
+            query: 'phone',
+            category: 'electronics',
+            requestedLimit: 10,
+            foundCount: 5,
+            savedCount: 4,
+            createdAt: createdAt1,
+            completedAt: null,
+            task: {
+              status: 'failed',
+              error: 'Timeout error',
+              errorType: 'timeout',
+              startedAt: createdAt1,
+              finishedAt: null,
+              updatedAt: taskUpdatedAt1,
+            },
+          },
+        ],
+      ]);
+
+      const result = await repository.findAll({ page: 1, limit: 10 });
+
+      expect(result).toEqual({
+        items: [
+          {
+            searchId: 'search-2',
+            taskId: 'task-2',
+            marketplace: 'amazon',
+            query: 'kindle',
+            category: 'electronics',
+            requestedLimit: 20,
+            foundCount: 15,
+            savedCount: 14,
+            createdAt: createdAt2,
+            completedAt: createdAt2,
+            task: {
+              status: 'completed',
+              error: null,
+              errorType: null,
+              startedAt: createdAt2,
+              finishedAt: createdAt2,
+              updatedAt: taskUpdatedAt2,
+            },
+          },
+          {
+            searchId: 'search-1',
+            taskId: 'task-1',
+            marketplace: 'amazon',
+            query: 'phone',
+            category: 'electronics',
+            requestedLimit: 10,
+            foundCount: 5,
+            savedCount: 4,
+            createdAt: createdAt1,
+            completedAt: null,
+            task: {
+              status: 'failed',
+              error: 'Timeout error',
+              errorType: 'timeout',
+              startedAt: createdAt1,
+              finishedAt: null,
+              updatedAt: taskUpdatedAt1,
+            },
+          },
+        ],
+        page: 1,
+        limit: 10,
+        total: 2,
+      });
+
+      expect(transaction).toHaveBeenCalled();
+      expect(countSearches).toHaveBeenCalledWith({ where: {} });
+      expect(findSearches).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {},
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: 0,
+          take: 10,
+          include: { task: true },
+        }),
+      );
+    });
+
+    it('returns empty results when no searches are found', async () => {
+      transaction.mockResolvedValue([0, []]);
+
+      const result = await repository.findAll({ page: 1, limit: 10 });
+
+      expect(result).toEqual({
+        items: [],
+        page: 1,
+        limit: 10,
+        total: 0,
+      });
+    });
+
+    it('applies filters correctly: query, marketplace, status', async () => {
+      transaction.mockResolvedValue([0, []]);
+
+      await repository.findAll(
+        { page: 1, limit: 10 },
+        {
+          query: 'kindle',
+          marketplace: 'amazon' as any,
+          status: 'completed' as any,
+        },
+      );
+
+      const expectedWhere = {
+        query: { contains: 'kindle', mode: 'insensitive' },
+        marketplace: 'amazon',
+        task: { status: 'completed' },
+      };
+
+      expect(countSearches).toHaveBeenCalledWith({ where: expectedWhere });
+      expect(findSearches).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expectedWhere,
+        }),
+      );
+    });
   });
 });
