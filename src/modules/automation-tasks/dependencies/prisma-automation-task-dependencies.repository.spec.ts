@@ -7,14 +7,14 @@ import { AddAutomationTaskDependencyResult } from './automation-task-dependencie
 import { PrismaAutomationTaskDependenciesRepository } from './prisma-automation-task-dependencies.repository';
 
 describe('PrismaAutomationTaskDependenciesRepository', () => {
-  const queryRaw = jest.fn();
+  const executeRaw = jest.fn();
   const findTasks = jest.fn();
   const findTask = jest.fn();
   const findDependency = jest.fn();
   const findLinks = jest.fn();
   const createDependency = jest.fn();
   const transactionClient = {
-    $queryRaw: queryRaw,
+    $executeRaw: executeRaw,
     automationTask: { findMany: findTasks, findUnique: findTask },
     automationTaskDependency: {
       findUnique: findDependency,
@@ -34,7 +34,7 @@ describe('PrismaAutomationTaskDependenciesRepository', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    queryRaw.mockResolvedValue([{ pg_advisory_xact_lock: null }]);
+    executeRaw.mockResolvedValue(1);
     findTasks.mockResolvedValue([{ id: 'a' }, { id: 'b' }]);
     findDependency.mockResolvedValue(null);
     findLinks.mockResolvedValue([]);
@@ -48,11 +48,11 @@ describe('PrismaAutomationTaskDependenciesRepository', () => {
     );
 
     expect(transaction).toHaveBeenCalledTimes(1);
-    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(executeRaw).toHaveBeenCalledTimes(1);
     expect(createDependency).toHaveBeenCalledWith({
       data: { predecessorId: 'a', successorId: 'b' },
     });
-    expect(queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
       findTasks.mock.invocationCallOrder[0],
     );
   });
@@ -74,7 +74,7 @@ describe('PrismaAutomationTaskDependenciesRepository', () => {
       AddAutomationTaskDependencyResult.TaskNotFound,
     );
 
-    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(executeRaw).toHaveBeenCalledTimes(1);
     expect(findDependency).not.toHaveBeenCalled();
     expect(createDependency).not.toHaveBeenCalled();
   });

@@ -8,6 +8,7 @@ import { MarketplaceProduct } from '../marketplace-product-search-provider.inter
 import { MarketplaceProductSearchError } from '../marketplace-product-search.error';
 import { MercadoLivreProductProvider } from './mercado-livre-product.provider';
 import {
+  extractMercadoLivreExternalId,
   normalizeMercadoLivreCard,
   parseMercadoLivrePrice,
 } from './mercado-livre-product-parser.utils';
@@ -301,5 +302,24 @@ describe('MercadoLivreProductProvider', () => {
   it('parses prices with Brazilian formatting', () => {
     expect(parseMercadoLivrePrice('R$ 1.299,90')).toBe(1299.9);
     expect(parseMercadoLivrePrice('Sem preço')).toBeUndefined();
+  });
+
+  it('extracts Mercado Livre external IDs from product URL variants', () => {
+    expect(
+      extractMercadoLivreExternalId('https://www.mercadolivre.com.br/MLB-123'),
+    ).toBe('MLB-123');
+    expect(
+      extractMercadoLivreExternalId(
+        'https://www.mercadolivre.com.br/oferta?wid=MLB456',
+      ),
+    ).toBe('MLB456');
+    expect(
+      extractMercadoLivreExternalId(
+        'https://www.mercadolivre.com.br/oferta#MLB789',
+      ),
+    ).toBe('MLB789');
+    expect(
+      extractMercadoLivreExternalId('https://www.mercadolivre.com.br/oferta'),
+    ).toBeUndefined();
   });
 });

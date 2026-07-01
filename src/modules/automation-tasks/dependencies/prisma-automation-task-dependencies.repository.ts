@@ -22,7 +22,7 @@ export class PrismaAutomationTaskDependenciesRepository implements AutomationTas
     successorId: string,
   ): Promise<AddAutomationTaskDependencyResult> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(${DEPENDENCY_GRAPH_LOCK_ID}::bigint)`;
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(${DEPENDENCY_GRAPH_LOCK_ID}::bigint)`;
 
       const tasks = await transaction.automationTask.findMany({
         where: { id: { in: [predecessorId, successorId] } },

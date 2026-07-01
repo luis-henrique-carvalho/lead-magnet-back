@@ -124,6 +124,41 @@ describe('AffiliateLinkCaptureProcessor', () => {
     });
   });
 
+  it('preserves Mercado Livre capture data in the asynchronous task result', async () => {
+    const mercadoLivreJobData: AffiliateLinkCaptureJobData = {
+      taskId: 'ml-task-id',
+      productId: '550e8400-e29b-41d4-a716-446655440123',
+      marketplace: Marketplace.MercadoLivre,
+      originalProductUrl: 'https://produto.mercadolivre.com.br/MLB-123',
+    };
+    captureAffiliateLink.mockResolvedValue({
+      capturedAffiliateUrl: 'https://mercadolivre.com/sec/affiliate-link',
+    });
+
+    await expect(
+      processor.process({
+        data: mercadoLivreJobData,
+      } as Job<AffiliateLinkCaptureJobData>),
+    ).resolves.toEqual({
+      productId: mercadoLivreJobData.productId,
+      marketplace: Marketplace.MercadoLivre,
+      originalProductUrl: mercadoLivreJobData.originalProductUrl,
+      capturedAffiliateUrl: 'https://mercadolivre.com/sec/affiliate-link',
+    });
+    expect(captureAffiliateLink).toHaveBeenCalledWith({
+      productId: mercadoLivreJobData.productId,
+      marketplace: Marketplace.MercadoLivre,
+      originalProductUrl: mercadoLivreJobData.originalProductUrl,
+    });
+    expect(saveResult).toHaveBeenCalledWith({
+      taskId: mercadoLivreJobData.taskId,
+      productId: mercadoLivreJobData.productId,
+      marketplace: Marketplace.MercadoLivre,
+      originalProductUrl: mercadoLivreJobData.originalProductUrl,
+      capturedAffiliateUrl: 'https://mercadolivre.com/sec/affiliate-link',
+    });
+  });
+
   it('maps expected manual errors to manual_required without retrying', async () => {
     captureAffiliateLink.mockRejectedValue(
       new AffiliateLinkCaptureManualRequiredError(
