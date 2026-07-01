@@ -41,7 +41,7 @@ describe('PrismaMarketplaceProductsRepository', () => {
     upsert.mockResolvedValue({ id: 'product-id' });
   });
 
-  it('upserts products and creates search links in one transaction', async () => {
+  it('upserts products by marketplace and external ID and creates search links in one transaction', async () => {
     createMany.mockResolvedValue({ count: 1 });
 
     await expect(
@@ -52,9 +52,9 @@ describe('PrismaMarketplaceProductsRepository', () => {
     expect(upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          marketplace_originalUrl: {
+          marketplace_externalId: {
             marketplace: Marketplace.Amazon,
-            originalUrl: 'https://amazon.com.br/dp/AMZ-1',
+            externalId: 'AMZ-1',
           },
         },
       }),
@@ -65,6 +65,33 @@ describe('PrismaMarketplaceProductsRepository', () => {
     });
     expect(updateSearch).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: 'search-id' } }),
+    );
+  });
+
+  it('falls back to marketplace and original URL when a product has no external ID', async () => {
+    createMany.mockResolvedValue({ count: 1 });
+
+    await repository.saveSearchResults(
+      'search-id',
+      [
+        {
+          marketplace: Marketplace.Amazon,
+          title: 'Produto sem ID externo',
+          originalUrl: 'https://amazon.com.br/oferta-sem-id',
+        },
+      ],
+      1,
+    );
+
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          marketplace_originalUrl: {
+            marketplace: Marketplace.Amazon,
+            originalUrl: 'https://amazon.com.br/oferta-sem-id',
+          },
+        },
+      }),
     );
   });
 

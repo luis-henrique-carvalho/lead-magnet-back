@@ -202,6 +202,7 @@ model MarketplaceProduct {
   affiliateLinkCaptures AffiliateLinkCaptureResult[]
 
   @@unique([marketplace, originalUrl])
+  @@unique([marketplace, externalId])
   @@index([externalId])
   @@map("marketplace_product")
 }

@@ -23,12 +23,7 @@ export class PrismaMarketplaceProductsRepository implements MarketplaceProductsR
 
       for (const product of products) {
         const persistedProduct = await transaction.marketplaceProduct.upsert({
-          where: {
-            marketplace_originalUrl: {
-              marketplace: product.marketplace,
-              originalUrl: product.originalUrl,
-            },
-          },
+          where: this.toUpsertWhere(product),
           create: this.toPersistenceData(product),
           update: this.toPersistenceData(product),
           select: { id: true },
@@ -55,6 +50,24 @@ export class PrismaMarketplaceProductsRepository implements MarketplaceProductsR
 
       return result.count;
     });
+  }
+
+  private toUpsertWhere(
+    product: PersistMarketplaceProductInput,
+  ): Prisma.MarketplaceProductWhereUniqueInput {
+    return product.externalId
+      ? {
+          marketplace_externalId: {
+            marketplace: product.marketplace,
+            externalId: product.externalId,
+          },
+        }
+      : {
+          marketplace_originalUrl: {
+            marketplace: product.marketplace,
+            originalUrl: product.originalUrl,
+          },
+        };
   }
 
   private toPersistenceData(
