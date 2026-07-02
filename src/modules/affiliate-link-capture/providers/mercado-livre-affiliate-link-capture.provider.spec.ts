@@ -150,16 +150,15 @@ describe('MercadoLivreAffiliateLinkCaptureProvider', () => {
   };
 
   it('opens an authenticated page and returns the generated affiliate URL', async () => {
-    usePage(
-      createPage([
-        { visible: false },
-        { visible: false },
-        {},
-        { visible: false },
-        { visible: false },
-        { value: 'https://mercadolivre.com/sec/affiliate-link' },
-      ]),
-    );
+    const page = createPage([
+      { visible: false },
+      { visible: false },
+      {},
+      { visible: false },
+      { visible: false },
+      { value: 'https://mercadolivre.com/sec/affiliate-link' },
+    ]);
+    usePage(page);
 
     await expect(provider.captureAffiliateLink(input)).resolves.toEqual({
       capturedAffiliateUrl: 'https://mercadolivre.com/sec/affiliate-link',
@@ -169,6 +168,9 @@ describe('MercadoLivreAffiliateLinkCaptureProvider', () => {
       input.originalProductUrl,
     );
     expect(close).toHaveBeenCalledTimes(1);
+    expect(page.locator).toHaveBeenCalledWith(
+      'nav[aria-label="Afiliados"] [data-testid="generate_link_button"]',
+    );
   });
 
   it('dismisses the Mercado Livre cashback div modal before reading the generated URL', async () => {

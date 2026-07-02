@@ -51,14 +51,16 @@ const CASHBACK_ACKNOWLEDGEMENT_SELECTOR = [
   'button:has-text("Entendi")',
 ].join(', ');
 
-const AFFILIATE_ACTION_SELECTOR = [
-  '[data-testid*="affiliate" i] button',
+const AFFILIATE_ACTION_SELECTORS = [
+  'nav[aria-label="Afiliados"] [data-testid="generate_link_button"]',
+  'nav[aria-label="Afiliados"] button.generate_link_button',
+  'nav[aria-label="Afiliados"] button:has-text("Compartilhar")',
+  'nav[aria-label="Afiliados"] [data-testid*="affiliate" i] button',
   'button[aria-label*="link de afiliado" i]',
   'button:has-text("Gerar link")',
   'a:has-text("Gerar link")',
   'button:has-text("Link de afiliado")',
-  'button:has-text("Compartilhar")',
-].join(', ');
+];
 
 const AFFILIATE_URL_SELECTOR = [
   '[data-testid="text-field__label_link"]',
@@ -137,10 +139,7 @@ export class MercadoLivreAffiliateLinkCaptureProvider implements AffiliateLinkCa
       this.logger.debug('Mercado Livre product page passed initial guards');
       await this.dismissCashbackModalIfPresent(session.page);
 
-      const action = await this.waitForVisibleLocator(
-        session.page,
-        AFFILIATE_ACTION_SELECTOR,
-      );
+      const action = await this.findAffiliateActionLocator(session.page);
 
       if (!action) {
         await this.logPageSnapshot(
@@ -167,9 +166,8 @@ export class MercadoLivreAffiliateLinkCaptureProvider implements AffiliateLinkCa
         this.logger.log(
           'Mercado Livre cashback modal was dismissed after affiliate action; clicking affiliate action again',
         );
-        const actionAfterModal = await this.waitForVisibleLocator(
+        const actionAfterModal = await this.findAffiliateActionLocator(
           session.page,
-          AFFILIATE_ACTION_SELECTOR,
         );
 
         if (!actionAfterModal) {
@@ -360,6 +358,23 @@ export class MercadoLivreAffiliateLinkCaptureProvider implements AffiliateLinkCa
     } catch {
       return null;
     }
+  }
+
+  private async findAffiliateActionLocator(
+    page: Page,
+  ): Promise<Locator | null> {
+    for (const selector of AFFILIATE_ACTION_SELECTORS) {
+      const locator = await this.waitForVisibleLocator(page, selector);
+
+      if (locator) {
+        this.logger.debug(
+          `Mercado Livre affiliate action selector matched: ${selector}`,
+        );
+        return locator;
+      }
+    }
+
+    return null;
   }
 
   private async findVisibleLocator(
