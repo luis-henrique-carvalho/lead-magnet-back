@@ -209,11 +209,15 @@ O parser do Mercado Livre também faz uma segunda camada de defesa:
 | `PLAYWRIGHT_HEADLESS`              | `true`       | Determina se o navegador rodará oculto (`true`) ou visível (`false`). |
 | `PLAYWRIGHT_NAVIGATION_TIMEOUT_MS` | `30000`      | Tempo limite para navegação do Playwright.                            |
 | `AMAZON_STORAGE_STATE_PATH`        | _Nenhum_     | Caminho absoluto para o arquivo JSON de cookies de sessão da Amazon.  |
+| `MERCADO_LIVRE_COOKIE_HEADER_PATH` | _Nenhum_     | Caminho absoluto para um arquivo local contendo o header HTTP `Cookie` copiado de uma sessão autenticada do Mercado Livre. |
+| `MERCADO_LIVRE_COOKIE_HEADER`      | _Nenhum_     | Header HTTP `Cookie` copiado de uma sessão autenticada do Mercado Livre. Preferir arquivo local para reduzir vazamento em histórico de shell/processos. |
 | `MERCADO_LIVRE_STORAGE_STATE_PATH` | _Nenhum_     | Caminho absoluto para o JSON de cookies de sessão do Mercado Livre.   |
 | `SHOPEE_STORAGE_STATE_PATH`        | _Nenhum_     | Caminho absoluto para o JSON de cookies de sessão da Shopee.          |
 
+Para Mercado Livre, a origem da sessão é resolvida nesta ordem: `MERCADO_LIVRE_COOKIE_HEADER_PATH`, `MERCADO_LIVRE_COOKIE_HEADER`, `MERCADO_LIVRE_STORAGE_STATE_PATH` e, por fim, `.auth/mercadolivre-storage-state.json`. Para voltar ao fluxo antigo com `storageState` gerado pelo Playwright, remova `MERCADO_LIVRE_COOKIE_HEADER_PATH` e `MERCADO_LIVRE_COOKIE_HEADER`.
+
 > [!WARNING]
-> Arquivos de sessão contêm tokens e cookies ativos. Eles foram adicionados ao `.gitignore` (`*.storage-state.json` e `.auth/`) e **nunca** devem ser versionados.
+> Arquivos de sessão e headers `Cookie` copiados contêm tokens e cookies ativos. Eles foram adicionados ao `.gitignore` (`*.storage-state.json` e `.auth/`) e **nunca** devem ser versionados, registrados em logs ou expostos em respostas de API.
 
 ---
 
